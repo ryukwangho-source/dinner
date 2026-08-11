@@ -7,6 +7,8 @@ const PORT = 3110;
 export default defineConfig({
   testDir: "./e2e",
   testMatch: /.*\.spec\.ts$/,
+  // 실행마다 E2E 전용 DB를 비운다 — 실패로 남은 저장 기록이 쌓이면 다른 테스트까지 깨진다
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 2 : 0,
@@ -22,5 +24,9 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      // 실사용 DB와 분리
+      SAVED_VENUES_DB_PATH: "data/saved-venues-e2e.db",
+    },
   },
 });
