@@ -3,10 +3,15 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { ResultList } from "@/components/venue/result-list";
+import { shareVenues } from "@/lib/venue-share";
 import type { RankedVenue } from "@/types/recommendation";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@/lib/venue-share", () => ({
+  shareVenues: vi.fn(),
 }));
 
 function makeVenue(id: string, price: number, overrides: Partial<RankedVenue["venue"]> = {}) {
@@ -87,6 +92,30 @@ describe("ResultList", () => {
     expect(
       screen.queryByText("예산에 맞는 장소가 없어 가까운 순으로 보여드려요"),
     ).not.toBeInTheDocument();
+  });
+
+  it("카톡 공유 클릭 → 결과 목록으로 shareVenues를 호출하고, 클립보드 복사 결과면 완료 토스트를 띄운다", async () => {
+    vi.mocked(shareVenues).mockResolvedValue("copied");
+    const user = userEvent.setup();
+    render(
+      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
+    );
+    await user.click(screen.getByRole("button", { name: "카톡 공유" }));
+
+    expect(shareVenues).toHaveBeenCalledWith(fiveResults);
+    expect(toast.success).toHaveBeenCalledWith("클립보드에 복사했어요");
+  });
+
+  it("카톡 공유 결과가 shared이면 완료 토스트를 띄우지 않는다", async () => {
+    vi.mocked(shareVenues).mockResolvedValue("shared");
+    const user = userEvent.setup();
+    render(
+      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
+    );
+    await user.click(screen.getByRole("button", { name: "카톡 공유" }));
+
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("선택 없이는 선택 저장 버튼이 비활성화되어 저장 API가 호출되지 않는다", () => {
