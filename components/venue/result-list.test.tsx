@@ -89,6 +89,14 @@ describe("ResultList", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("선택 없이는 선택 저장 버튼이 비활성화되어 저장 API가 호출되지 않는다", () => {
+    render(
+      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
+    );
+    expect(screen.getByRole("button", { name: "선택 저장" })).toBeDisabled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("카드 체크박스를 클릭하면 선택 개수가 서버 왕복 없이 즉시 갱신된다", async () => {
     const user = userEvent.setup();
     render(

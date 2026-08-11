@@ -1,21 +1,87 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { BookmarkIcon, Trash2Icon } from "lucide-react";
 import type { SavedVenue } from "@/services/saved-venue-store";
 
 export interface SavedListProps {
   items: SavedVenue[];
 }
 
-export function SavedList({ items }: SavedListProps) {
+export function SavedList({ items: initialItems }: SavedListProps) {
+  const [items, setItems] = useState(initialItems);
+
+  async function handleDelete(id: string) {
+    const res = await fetch(`/api/saved/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    }
+  }
+
+  async function handleDeleteAll() {
+    const res = await fetch("/api/saved", { method: "DELETE" });
+    if (res.ok) {
+      setItems([]);
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl p-4">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <BookmarkIcon />
+            </EmptyMedia>
+            <EmptyTitle>저장된 장소가 없어요</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold">저장한 장소</span>
-        <Button variant="outline" size="sm" disabled>
-          모두 삭제
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              모두 삭제
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>저장한 장소를 모두 삭제할까요?</AlertDialogTitle>
+              <AlertDialogDescription>
+                삭제하면 되돌릴 수 없어요.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>취소</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteAll}>모두 삭제하기</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
@@ -30,8 +96,13 @@ export function SavedList({ items }: SavedListProps) {
                   {item.category} · {item.region}
                 </div>
               </div>
-              <Button variant="outline" size="icon-sm" disabled>
-                삭제
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="삭제"
+                onClick={() => handleDelete(item.id)}
+              >
+                <Trash2Icon />
               </Button>
             </CardContent>
           </Card>

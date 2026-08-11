@@ -31,3 +31,8 @@ export async function POST(request: Request) {
   const saved = getSavedVenueStore().saveMany(venues);
   return Response.json(saved, { status: 201 });
 }
+
+export async function DELETE() {
+  const count = getSavedVenueStore().removeAll();
+  return Response.json({ deleted: count });
+}

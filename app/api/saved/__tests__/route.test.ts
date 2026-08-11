@@ -8,7 +8,7 @@ vi.mock("@/services/saved-venue-store", async (importOriginal) => {
   return { ...actual, getSavedVenueStore: () => store };
 });
 
-const { GET: listSaved, POST: saveVenues } = await import("../route");
+const { GET: listSaved, POST: saveVenues, DELETE: deleteAllSaved } = await import("../route");
 
 function jsonRequest(body: unknown) {
   return new Request("http://localhost/api/saved", {
@@ -47,5 +47,22 @@ describe("/api/saved", () => {
   it("존재하지 않는 venueId만 있으면 400", async () => {
     const res = await saveVenues(jsonRequest({ venueIds: ["no-such-venue"] }));
     expect(res.status).toBe(400);
+  });
+
+  it("DELETE → 전체 삭제되고 삭제된 개수 반환, 목록도 빈다", async () => {
+    await saveVenues(jsonRequest({ venueIds: ["gangnam-charcoal"] }));
+    await saveVenues(jsonRequest({ venueIds: ["gangnam-hof"] }));
+
+    const res = await deleteAllSaved();
+    const body = await res.json();
+    expect(body.deleted).toBe(2);
+
+    const listRes = await listSaved();
+    expect(await listRes.json()).toHaveLength(0);
+  });
+
+  it("인증 헤더·쿠키 없이 DELETE를 호출해도 성공한다 (로그인 요구 없음)", async () => {
+    const res = await deleteAllSaved();
+    expect(res.status).toBe(200);
   });
 });
