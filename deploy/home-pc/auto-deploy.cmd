@@ -1,0 +1,11 @@
+@echo off
+REM 집 PC 자동 배포 감시 런처 — 실제 루프는 auto-deploy.ps1 에 있다.
+REM 이 파일은 run-dinner.cmd와 같은 shim 패턴이다.
+REM
+REM 이 파일을 직접 실행하면 콘솔 창이 뜨고, 창을 닫으면 감시가 멈춘다.
+REM    평소 기동은 창을 만들지 않는 auto-deploy-hidden.vbs 로 한다 — 시작프로그램도 그것.
+REM
+REM 종료하려면: 작업 관리자에서 이 cmd.exe / powershell.exe 를 종료.
+REM 로그는 logs\deploy.log 에 쌓인다.
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0auto-deploy.ps1"

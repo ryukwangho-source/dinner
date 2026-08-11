@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe: venue-recommendation + venue-vote</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root {
+    --w-bg: #f5f5f5;
+    --w-border: #ccc;
+    --w-text: #555;
+    --w-muted: #aaa;
+    --w-fill: #eee;
+  }
+
+  * {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--w-text);
+  }
+
+  body { background: var(--w-bg); }
+
+  /* Screen nav */
+  nav { position: sticky; top: 0; z-index: 40; background: var(--w-bg); border-bottom: 1px solid var(--w-border); }
+  nav button { cursor: pointer; font-size: 13px; }
+  nav button:hover { background: var(--w-fill); border-radius: 4px; }
+  nav button.active { font-weight: bold; border-bottom: 2px solid var(--w-text); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Viewport toggle */
+  .vp-toggle button {
+    font-size: 12px; padding: 2px 8px;
+    border: 1px solid var(--w-border); cursor: pointer; background: white;
+  }
+  .vp-toggle button:first-child { border-radius: 4px 0 0 4px; }
+  .vp-toggle button:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+  .vp-toggle button.active { background: var(--w-text); color: white; }
+
+  /* Mobile viewport frame */
+  body.viewport-mobile .screen-content {
+    max-width: 375px !important;
+    margin: 24px auto !important;
+    border: 2px solid var(--w-border);
+    border-radius: 24px;
+    min-height: 667px;
+    background: white;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 32px 16px !important;
+  }
+
+  /* Screen Notes */
+  .screen-notes {
+    background: #fffde7;
+    border-left: 3px solid #ffd54f;
+    padding: 12px 16px;
+    margin-top: 24px;
+    font-size: 13px;
+    border-radius: 0 4px 4px 0;
+  }
+  .screen-notes summary {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    color: #b0a050;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .screen-notes p { margin: 6px 0 2px; color: #777; }
+  .screen-notes ul { margin: 4px 0 0 16px; padding: 0; color: #777; }
+  .screen-notes li { margin: 2px 0; }
+
+  /* group headers in nav for readability */
+  .nav-group { font-size: 10px; color: var(--w-muted); padding: 0 2px; align-self: center; }
+
+  /* wireframe-only helpers */
+  .w-card { border: 1px solid var(--w-border); border-radius: 8px; background: white; }
+  .w-chip { border: 1px solid var(--w-border); border-radius: 999px; padding: 2px 10px; font-size: 11px; }
+  .w-bar-track { background: var(--w-fill); border-radius: 999px; overflow: hidden; height: 8px; }
+  .w-bar-fill { background: var(--w-muted); height: 100%; }
+  .w-btn { border: 1px solid var(--w-border); border-radius: 6px; padding: 8px 14px; background: white; font-size: 13px; text-align: center; }
+  .w-btn-primary { background: var(--w-text); color: white; border-color: var(--w-text); }
+  .w-btn-primary * { color: white; }
+  .w-btn[disabled], .w-btn-disabled { opacity: 0.4; }
+  .w-input { border: 1px solid var(--w-border); border-radius: 6px; padding: 8px 10px; background: white; width: 100%; font-size: 13px; }
+  .w-toast { border: 1px solid var(--w-border); border-radius: 6px; background: var(--w-fill); padding: 8px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .w-empty { text-align: center; padding: 48px 16px; color: var(--w-muted); }
+</style>
+</head>
+<body class="p-0 m-0 viewport-mobile">
+
+<nav class="flex items-center gap-3 px-6 py-2 flex-wrap">
+  <span class="text-xs" style="color:var(--w-muted)">wireframe</span>
+  <!-- NAV_BUTTONS -->
+  <span class="nav-group">홈</span>
+  <button id="nav-0" onclick="show(0)" class="px-2 py-1">0. 기본</button>
+  <button id="nav-1" onclick="show(1)" class="px-2 py-1">1. 입력오류</button>
+
+  <span class="nav-group">결과</span>
+  <button id="nav-2" onclick="show(2)" class="px-2 py-1">2. 기본</button>
+  <button id="nav-3" onclick="show(3)" class="px-2 py-1">3. 예산초과뿐</button>
+  <button id="nav-4" onclick="show(4)" class="px-2 py-1">4. 시드부족</button>
+  <button id="nav-5" onclick="show(5)" class="px-2 py-1">5. 저장완료</button>
+  <button id="nav-6" onclick="show(6)" class="px-2 py-1">6. 선택없음</button>
+  <button id="nav-7" onclick="show(7)" class="px-2 py-1">7. 공유완료</button>
+
+  <span class="nav-group">저장목록</span>
+  <button id="nav-8" onclick="show(8)" class="px-2 py-1">8. 기본</button>
+  <button id="nav-9" onclick="show(9)" class="px-2 py-1">9. 빈상태</button>
+
+  <span class="nav-group">투표만들기</span>
+  <button id="nav-10" onclick="show(10)" class="px-2 py-1">10. 선택</button>
+  <button id="nav-11" onclick="show(11)" class="px-2 py-1">11. 발급완료</button>
+
+  <span class="nav-group">참석자투표</span>
+  <button id="nav-12" onclick="show(12)" class="px-2 py-1">12. 최초투표</button>
+  <button id="nav-13" onclick="show(13)" class="px-2 py-1">13. 투표수정</button>
+  <button id="nav-14" onclick="show(14)" class="px-2 py-1">14. 마감</button>
+
+  <div class="vp-toggle flex ml-auto">
+    <button id="vp-desktop" onclick="setViewport('desktop')">Desktop</button>
+    <button id="vp-mobile" onclick="setViewport('mobile')" class="active">Mobile</button>
+  </div>
+</nav>
+
+<!-- SCREEN_CONTENT -->
+
+<!-- ═══════════════════════ 0. 홈 — 기본 ═══════════════════════ -->
+<div id="screen-0" class="screen" data-scenario="rec-1">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      0. 홈 — 기본
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg">
+        <div class="mb-6 text-center">
+          <div class="text-base font-bold" style="color:var(--w-text)">회식 장소 추천</div>
+          <div class="text-xs mt-1" style="color:var(--w-muted)">지역·인원수·예산만 입력하면 상위 5곳을 추천해드려요</div>
+        </div>
+
+        <div class="w-card p-4 flex flex-col gap-4">
+          <div>
+            <label class="text-xs font-bold block mb-1">지역</label>
+            <div class="w-input flex items-center justify-between">
+              <span>강남역</span>
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold block mb-1">인원수</label>
+            <div class="w-input flex items-center justify-between">
+              <span>8</span>
+              <span class="text-xs" style="color:var(--w-muted)">명</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold block mb-1">인원당 가용예산</label>
+            <div class="w-input flex items-center justify-between">
+              <span>30000</span>
+              <span class="text-xs" style="color:var(--w-muted)">원</span>
+            </div>
+          </div>
+
+          <button class="w-btn w-btn-primary mt-2">추천받기</button>
+        </div>
+
+        <div class="mt-4 text-center">
+          <button class="text-xs underline" style="color:var(--w-muted)">저장한 장소 보기 →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>지역·인원수·예산을 입력받는 진입 화면. 세 값이 모두 채워진 정상 상태.</p>
+        <ul>
+          <li>트리거: 앱 최초 진입 (URL 루트)</li>
+          <li>인터랙션: 지역 드롭다운 선택 → 인원수 입력 → 예산 입력 → "추천받기" 클릭. 하단 링크로 저장 목록 화면 이동</li>
+          <li>전환: "추천받기" 클릭 → 결과 화면(2)으로 이동</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 1. 홈 — 입력 오류 ═══════════════════════ -->
+<div id="screen-1" class="screen" data-scenario="rec-11">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      1. 홈 — 입력 오류
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg">
+        <div class="mb-6 text-center">
+          <div class="text-base font-bold" style="color:var(--w-text)">회식 장소 추천</div>
+        </div>
+
+        <div class="w-card p-4 flex flex-col gap-4">
+          <div>
+            <label class="text-xs font-bold block mb-1">지역</label>
+            <div class="w-input flex items-center justify-between">
+              <span>강남역</span>
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold block mb-1">인원수</label>
+            <div class="w-input flex items-center justify-between">
+              <span style="color:var(--w-muted)">예: 8</span>
+              <span class="text-xs" style="color:var(--w-muted)">명</span>
+            </div>
+            <p class="text-xs mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> 입력해주세요</p>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold block mb-1">인원당 가용예산</label>
+            <div class="w-input flex items-center justify-between">
+              <span style="color:var(--w-muted)">예: 30000</span>
+              <span class="text-xs" style="color:var(--w-muted)">원</span>
+            </div>
+            <p class="text-xs mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i> 입력해주세요</p>
+          </div>
+
+          <button class="w-btn w-btn-disabled mt-2">추천받기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>인원수·예산을 비운 채 "추천받기"를 눌렀을 때의 상태.</p>
+        <ul>
+          <li>트리거: 필수 필드가 비어있는 채로 "추천받기" 클릭</li>
+          <li>인터랙션: 비어있는 각 필드 아래 안내 문구 노출. 화면 전환은 일어나지 않는다</li>
+          <li>전환: 없음 — 값 채우고 다시 "추천받기" 클릭해야 결과 화면(2)으로 이동</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 2. 결과 — 기본 ═══════════════════════ -->
+<div id="screen-2" class="screen" data-scenario="rec-1, rec-2, vote-6">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      2. 결과 — 기본
+    </h2>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <div class="text-xs w-chip">강남역 · 8명 · 1인 30,000원</div>
+    </div>
+
+    <div class="grid grid-cols-1 @md:grid-cols-2 gap-3 mb-4">
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" checked class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold" style="color:var(--w-text)">숯불향 강남점</span>
+            <span class="text-xs">★ 4.6</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">고깃집 · 강남역 3번 출구</div>
+          <div class="flex items-center gap-2 mt-1 text-xs" style="color:var(--w-muted)">
+            <span>리뷰 1,204</span><span>·</span><span>조회 8.9k</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 28,000원</div>
+        </div>
+      </div>
+
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold" style="color:var(--w-text)">이자카야 온기</span>
+            <span class="text-xs">★ 4.5</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">이자카야 · 강남역 5번 출구</div>
+          <div class="flex items-center gap-2 mt-1 text-xs" style="color:var(--w-muted)">
+            <span>리뷰 902</span><span>·</span><span>조회 6.2k</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 29,500원</div>
+        </div>
+      </div>
+
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold" style="color:var(--w-text)">모던삼겹 강남</span>
+            <span class="text-xs">★ 4.4</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">고깃집 · 강남역 1번 출구</div>
+          <div class="flex items-center gap-2 mt-1 text-xs" style="color:var(--w-muted)">
+            <span>리뷰 731</span><span>·</span><span>조회 5.1k</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 27,000원</div>
+        </div>
+      </div>
+
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-bold" style="color:var(--w-text)">오마카세 결</span>
+            <span class="w-chip">예산 초과</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">일식 · 강남역 2번 출구</div>
+          <div class="flex items-center gap-2 mt-1 text-xs flex-wrap" style="color:var(--w-muted)">
+            <span>★ 4.8</span><span>·</span><span>리뷰 540</span><span>·</span><span>조회 4.4k</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 42,000원</div>
+        </div>
+      </div>
+
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold" style="color:var(--w-text)">호프집 강남불빛</span>
+            <span class="text-xs">★ 4.3</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">호프 · 강남역 4번 출구</div>
+          <div class="flex items-center gap-2 mt-1 text-xs" style="color:var(--w-muted)">
+            <span>리뷰 615</span><span>·</span><span>조회 3.8k</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 22,000원</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="w-card p-3 flex flex-col @md:flex-row gap-2 mb-6">
+      <span class="text-xs self-center mr-auto" style="color:var(--w-muted)">1곳 선택됨</span>
+      <button class="w-btn"><i data-lucide="bookmark" class="w-3 h-3 inline"></i> 선택 저장</button>
+      <button class="w-btn"><i data-lucide="share-2" class="w-3 h-3 inline"></i> 카톡 공유</button>
+      <button class="w-btn w-btn-primary"><i data-lucide="vote" class="w-3 h-3 inline"></i> 투표 만들기</button>
+    </div>
+
+    <div class="mb-2 text-xs font-bold" style="color:var(--w-muted)">진행 중인 투표</div>
+    <div class="flex flex-col gap-2">
+      <div class="w-card p-3 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-bold">오늘 저녁 뭐 먹지?</div>
+          <div class="text-xs" style="color:var(--w-muted)">후보 3곳 · 42분 남음</div>
+        </div>
+        <span class="w-chip">진행 중</span>
+      </div>
+      <div class="w-card p-3 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-bold">지난주 회식 투표</div>
+          <div class="text-xs" style="color:var(--w-muted)">후보 2곳 · 종료됨</div>
+        </div>
+        <span class="w-chip">마감</span>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>추천 5곳을 카드로 보여주고, 선택→저장/공유/투표 만들기로 이어지는 허브 화면. 예산 이내 카드가 예산 초과 카드보다 항상 먼저 나온다.</p>
+        <ul>
+          <li>트리거: 홈에서 "추천받기" 클릭</li>
+          <li>인터랙션: 카드 체크박스로 다중 선택 → 하단 액션바 "선택된 개수" 갱신. "선택 저장" / "카톡 공유" / "투표 만들기" 버튼은 각각 선택된 카드를 대상으로 동작</li>
+          <li>전환: "선택 저장" → 저장 완료(5) 상태로. "투표 만들기" → 투표 만들기(10)로 이동, 선택된 카드가 후보로 넘어감. "진행 중인 투표" 항목 클릭 → 참석자 투표 화면(마감이면 14, 진행 중이면 12/13)으로 이동</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 3. 결과 — 예산 초과뿐 ═══════════════════════ -->
+<div id="screen-3" class="screen" data-scenario="rec-3">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      3. 결과 — 예산 초과뿐
+    </h2>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <div class="text-xs w-chip">판교역 · 6명 · 1인 15,000원</div>
+    </div>
+
+    <div class="w-toast mb-3">
+      <i data-lucide="info" class="w-3 h-3"></i>
+      예산에 맞는 장소가 없어 가까운 순으로 보여드려요
+    </div>
+
+    <div class="grid grid-cols-1 @md:grid-cols-2 gap-3 mb-4">
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-bold">스시엔</span>
+            <span class="w-chip">예산 초과</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">일식 · 판교역</div>
+          <div class="text-xs mt-1 font-bold">1인 22,000원</div>
+        </div>
+      </div>
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-bold">한우마당</span>
+            <span class="w-chip">예산 초과</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">고깃집 · 판교역</div>
+          <div class="text-xs mt-1 font-bold">1인 35,000원</div>
+        </div>
+      </div>
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm font-bold">비스트로 판교</span>
+            <span class="w-chip">예산 초과</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">양식 · 판교역</div>
+          <div class="text-xs mt-1 font-bold">1인 38,000원</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>선택 지역의 모든 후보가 예산을 초과할 때의 결과 화면 상태.</p>
+        <ul>
+          <li>트리거: 예산 이내 후보가 0곳인 지역·예산 조합으로 추천받기</li>
+          <li>인터랙션: 카드 상단 배너로 예산 초과 상황을 안내. 카드 목록·선택·하단 액션바는 기본 결과 화면(2)과 동일하게 동작</li>
+          <li>전환: 기본 결과 화면(2)과 동일</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 4. 결과 — 시드 데이터 부족 ═══════════════════════ -->
+<div id="screen-4" class="screen" data-scenario="rec-4">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      4. 결과 — 시드 데이터 부족 (3곳뿐)
+    </h2>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <div class="text-xs w-chip">여의도역 · 4명 · 1인 20,000원</div>
+    </div>
+
+    <div class="grid grid-cols-1 @md:grid-cols-2 gap-3 mb-4">
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">여의도 곱창골목</span>
+            <span class="text-xs">★ 4.5</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">곱창 · 여의도역</div>
+          <div class="text-xs mt-1 font-bold">1인 19,000원</div>
+        </div>
+      </div>
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">여의나루 삼겹살</span>
+            <span class="text-xs">★ 4.3</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">고깃집 · 여의도역</div>
+          <div class="text-xs mt-1 font-bold">1인 21,000원</div>
+        </div>
+      </div>
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">한강포차</span>
+            <span class="text-xs">★ 4.1</span>
+          </div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">호프 · 여의도역</div>
+          <div class="text-xs mt-1 font-bold">1인 18,000원</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>선택 지역의 시드 장소가 5곳보다 적을 때 — 있는 만큼만 카드로 표시하고 빈 칸을 채우지 않는다.</p>
+        <ul>
+          <li>트리거: 시드 데이터가 5곳 미만인 지역으로 추천받기</li>
+          <li>인터랙션: 기본 결과 화면(2)과 동일, 카드 개수만 다름</li>
+          <li>전환: 기본 결과 화면(2)과 동일</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 5. 결과 — 저장 완료 ═══════════════════════ -->
+<div id="screen-5" class="screen" data-scenario="rec-5">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      5. 결과 — 저장 완료
+    </h2>
+
+    <div class="w-toast mb-3">
+      <i data-lucide="check-circle" class="w-3 h-3"></i>
+      2곳을 저장했어요
+    </div>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <div class="text-xs w-chip">강남역 · 8명 · 1인 30,000원</div>
+    </div>
+
+    <div class="grid grid-cols-1 @md:grid-cols-2 gap-3 mb-4">
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" checked class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">숯불향 강남점</span><span class="text-xs">★ 4.6</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 28,000원</div>
+        </div>
+      </div>
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" checked class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">호프집 강남불빛</span><span class="text-xs">★ 4.3</span>
+          </div>
+          <div class="text-xs mt-1 font-bold">1인 22,000원</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="w-card p-3 flex flex-col @md:flex-row gap-2">
+      <span class="text-xs self-center mr-auto" style="color:var(--w-muted)">2곳 선택됨</span>
+      <button class="w-btn"><i data-lucide="bookmark" class="w-3 h-3 inline"></i> 선택 저장</button>
+      <button class="w-btn"><i data-lucide="share-2" class="w-3 h-3 inline"></i> 카톡 공유</button>
+      <button class="w-btn w-btn-primary"><i data-lucide="vote" class="w-3 h-3 inline"></i> 투표 만들기</button>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>체크한 장소 저장 직후의 확인 상태.</p>
+        <ul>
+          <li>트리거: 카드 2개 체크 후 "선택 저장" 클릭</li>
+          <li>인터랙션: 상단 토스트로 저장 결과 안내. 카드·체크 상태는 유지된다</li>
+          <li>전환: "저장한 장소 보기"로 저장 목록(8)에서 실제 반영을 확인할 수 있다</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 6. 결과 — 선택 없음 경고 ═══════════════════════ -->
+<div id="screen-6" class="screen" data-scenario="rec-6, vote-2">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      6. 결과 — 선택 없음 경고
+    </h2>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <div class="text-xs w-chip">강남역 · 8명 · 1인 30,000원</div>
+    </div>
+
+    <div class="grid grid-cols-1 @md:grid-cols-2 gap-3 mb-4">
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">숯불향 강남점</span><span class="text-xs">★ 4.6</span>
+          </div>
+        </div>
+      </div>
+      <div class="w-card p-3 flex gap-3">
+        <input type="checkbox" class="mt-1">
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold">이자카야 온기</span><span class="text-xs">★ 4.5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="w-toast mb-3">
+      <i data-lucide="alert-circle" class="w-3 h-3"></i>
+      저장할 장소를 선택해주세요
+    </div>
+
+    <div class="w-card p-3 flex flex-col @md:flex-row gap-2">
+      <span class="text-xs self-center mr-auto" style="color:var(--w-muted)">0곳 선택됨</span>
+      <button class="w-btn w-btn-disabled"><i data-lucide="bookmark" class="w-3 h-3 inline"></i> 선택 저장</button>
+      <button class="w-btn"><i data-lucide="share-2" class="w-3 h-3 inline"></i> 카톡 공유</button>
+      <button class="w-btn w-btn-disabled"><i data-lucide="vote" class="w-3 h-3 inline"></i> 투표 만들기</button>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>아무 카드도 선택하지 않은 채 "선택 저장" 또는 "투표 만들기"를 시도했을 때의 상태.</p>
+        <ul>
+          <li>트리거: 체크된 카드 0개인 상태로 "선택 저장" 또는 "투표 만들기" 클릭(또는 두 버튼이 애초에 비활성)</li>
+          <li>인터랙션: 경고 토스트 노출. 문구는 어떤 버튼을 눌렀는지에 따라 "저장할 장소를 선택해주세요" / "투표할 장소를 선택해주세요"로 달라진다 (여기선 저장 기준 예시)</li>
+          <li>전환: 없음 — 카드를 선택해야 다음 동작이 가능하다</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 7. 결과 — 공유 완료(클립보드) ═══════════════════════ -->
+<div id="screen-7" class="screen" data-scenario="rec-7">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      7. 결과 — 공유 완료 (클립보드 복사, 데스크톱 폴백)
+    </h2>
+
+    <div class="w-toast mb-3">
+      <i data-lucide="clipboard-check" class="w-3 h-3"></i>
+      클립보드에 복사했어요
+    </div>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <div class="text-xs w-chip">강남역 · 8명 · 1인 30,000원</div>
+    </div>
+
+    <div class="w-card p-3 text-xs mb-4" style="color:var(--w-muted); white-space:pre-line;">📍 강남역 · 8명
+1. 숯불향 강남점 (1인 28,000원)
+2. 이자카야 온기 (1인 29,500원)
+3. 모던삼겹 강남 (1인 27,000원)
+4. 오마카세 결 (1인 42,000원)
+5. 호프집 강남불빛 (1인 22,000원)
+🔗 dinner.example</div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>Web Share API 미지원 환경(주로 데스크톱)에서 "카톡 공유" 클릭 시 클립보드로 대체된 상태. 지원 환경(주로 모바일)에서는 OS 공유 시트가 열려 카카오톡 등을 선택할 수 있다(OS 시트는 와이어프레임으로 표현하지 않음).</p>
+        <ul>
+          <li>트리거: 결과 화면(2)에서 "카톡 공유" 클릭 + Web Share API 미지원 환경</li>
+          <li>인터랙션: 클립보드에 5곳 요약 텍스트가 복사되고 상단에 완료 토스트 노출</li>
+          <li>전환: 없음 — 같은 결과 화면에 머무른다</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 8. 저장 목록 — 기본 ═══════════════════════ -->
+<div id="screen-8" class="screen" data-scenario="rec-8, rec-9">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      8. 저장 목록 — 기본
+    </h2>
+
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span class="text-sm font-bold">저장한 장소</span>
+      </div>
+      <button class="w-btn text-xs">모두 삭제</button>
+    </div>
+
+    <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
+      <div class="w-card p-3 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-bold">숯불향 강남점</div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">고깃집 · 강남역 · 방금 저장</div>
+        </div>
+        <button class="w-btn text-xs"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+      </div>
+      <div class="w-card p-3 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-bold">호프집 강남불빛</div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">호프 · 강남역 · 방금 저장</div>
+        </div>
+        <button class="w-btn text-xs"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+      </div>
+      <div class="w-card p-3 flex items-center justify-between">
+        <div>
+          <div class="text-sm font-bold">이자카야 온기</div>
+          <div class="text-xs mt-0.5" style="color:var(--w-muted)">이자카야 · 강남역 · 어제</div>
+        </div>
+        <button class="w-btn text-xs"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>지금까지 저장된 장소 전체를 모아보는 화면 (전체 공유 목록, 개인별 아님). 최근 저장 순으로 정렬.</p>
+        <ul>
+          <li>트리거: 결과 화면 액션바의 "선택 저장" 후, 또는 홈 화면 하단 링크에서 진입</li>
+          <li>인터랙션: 항목별 삭제 버튼(클릭 시 그 항목만 제거) / 상단 "모두 삭제" 버튼(확인 후 전체 제거 → 빈 상태(9)로 전환)</li>
+          <li>전환: 없음 — 단독 목록 화면</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 9. 저장 목록 — 빈 상태 ═══════════════════════ -->
+<div id="screen-9" class="screen" data-scenario="rec-10">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      9. 저장 목록 — 빈 상태
+    </h2>
+
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <span class="text-sm font-bold">저장한 장소</span>
+    </div>
+
+    <div class="w-empty">
+      <i data-lucide="bookmark" class="w-6 h-6 mx-auto mb-2"></i>
+      <div class="text-sm">저장된 장소가 없어요</div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>저장된 장소가 하나도 없을 때(최초 진입 또는 "모두 삭제" 직후)의 상태.</p>
+        <ul>
+          <li>트리거: 저장 목록에 항목이 0건인 상태로 진입, 또는 "모두 삭제" 확인 직후</li>
+          <li>인터랙션: 없음 — "모두 삭제" 버튼은 이 상태에서 사라지거나 비활성화된다</li>
+          <li>전환: 없음</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 10. 투표 만들기 — 선택 ═══════════════════════ -->
+<div id="screen-10" class="screen" data-scenario="vote-1">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      10. 투표 만들기 — 후보·제한시간 선택
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span class="text-sm font-bold">투표 만들기</span>
+        </div>
+
+        <div class="w-card p-4 mb-3">
+          <div class="text-xs font-bold mb-2" style="color:var(--w-muted)">후보 (결과 화면에서 선택됨)</div>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between text-sm">
+              <span>숯불향 강남점</span>
+              <span class="text-xs" style="color:var(--w-muted)">1인 28,000원</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span>이자카야 온기</span>
+              <span class="text-xs" style="color:var(--w-muted)">1인 29,500원</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span>호프집 강남불빛</span>
+              <span class="text-xs" style="color:var(--w-muted)">1인 22,000원</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="w-card p-4 mb-4">
+          <div class="text-xs font-bold mb-2">제한시간</div>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="w-btn text-xs">30분</button>
+            <button class="w-btn w-btn-primary text-xs">1시간</button>
+            <button class="w-btn text-xs">3시간</button>
+            <button class="w-btn text-xs">내일까지</button>
+          </div>
+        </div>
+
+        <button class="w-btn w-btn-primary w-full">투표 만들기 확정</button>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>결과 화면에서 체크한 후보를 확인하고 제한시간을 정해 투표를 발급하는 화면.</p>
+        <ul>
+          <li>트리거: 결과 화면에서 카드 선택 후 "투표 만들기" 클릭</li>
+          <li>인터랙션: 후보 목록은 결과 화면에서 넘어온 값 그대로 표시(이 화면에서 후보 추가/제거는 없음). 제한시간 옵션 중 하나 선택 → "투표 만들기 확정" 클릭</li>
+          <li>전환: 확정 시 발급 완료 화면(11)으로 전환. 결과 화면(2)의 "진행 중인 투표" 목록에도 즉시 반영됨</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 11. 투표 만들기 — 발급 완료 ═══════════════════════ -->
+<div id="screen-11" class="screen" data-scenario="vote-1">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      11. 투표 만들기 — 발급 완료
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg text-center">
+        <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-3"></i>
+        <div class="text-sm font-bold mb-1">투표가 만들어졌어요</div>
+        <div class="text-xs mb-4" style="color:var(--w-muted)">1시간 후 마감 · 후보 3곳</div>
+
+        <div class="w-input text-xs mb-3 text-left" style="color:var(--w-muted)">https://dinner.example/vote/ab12cd</div>
+
+        <div class="flex gap-2 mb-4">
+          <button class="w-btn flex-1 text-xs"><i data-lucide="share-2" class="w-3 h-3 inline"></i> 카톡으로 공유</button>
+          <button class="w-btn flex-1 text-xs"><i data-lucide="copy" class="w-3 h-3 inline"></i> 링크 복사</button>
+        </div>
+
+        <button class="text-xs underline" style="color:var(--w-muted)">결과 화면으로 돌아가기</button>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>투표 만들기 확정 직후, 참석자에게 보낼 링크를 공유하는 화면.</p>
+        <ul>
+          <li>트리거: 투표 만들기(10)에서 "투표 만들기 확정" 클릭</li>
+          <li>인터랙션: "카톡으로 공유"는 OS 공유 시트(모바일) 또는 클립보드 복사(데스크톱)로 동작. "링크 복사"는 항상 클립보드로 복사</li>
+          <li>전환: "결과 화면으로 돌아가기" → 결과 화면(2)으로 이동, 방금 만든 투표가 "진행 중인 투표" 목록에 보인다</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 12. 참석자 투표 — 최초 투표 ═══════════════════════ -->
+<div id="screen-12" class="screen" data-scenario="vote-3">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      12. 참석자 투표 — 최초 투표 (아직 이 기기는 투표 안 함)
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg">
+
+        <div class="text-center mb-4">
+          <div class="text-sm font-bold">오늘 저녁 뭐 먹지?</div>
+          <div class="text-xs mt-1 w-chip inline-block">1시간 24분 남음</div>
+        </div>
+
+        <div class="flex flex-col gap-2 mb-4">
+          <div class="w-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <input type="checkbox">
+              <span class="text-sm font-bold flex-1">숯불향 강남점</span>
+              <span class="text-xs font-bold">2표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:66%"></div></div>
+          </div>
+          <div class="w-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <input type="checkbox">
+              <span class="text-sm font-bold flex-1">이자카야 온기</span>
+              <span class="text-xs font-bold">1표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:33%"></div></div>
+          </div>
+          <div class="w-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <input type="checkbox">
+              <span class="text-sm font-bold flex-1">호프집 강남불빛</span>
+              <span class="text-xs font-bold">0표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <button class="w-btn w-btn-primary w-full">투표하기</button>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>공유받은 링크로 처음 들어온 참석자 화면. 다른 사람들의 득표는 이미 반영되어 보이지만, 이 기기는 아직 체크·제출한 적이 없다.</p>
+        <ul>
+          <li>트리거: 공유받은 투표 링크(URL)로 첫 접속</li>
+          <li>인터랙션: 후보 체크박스 다중 선택 → "투표하기" 클릭. 득표수·막대는 실시간 반영</li>
+          <li>전환: 제출 후 같은 화면이 "투표 수정"(13) 상태로 바뀐다(내 선택이 체크된 채로, 버튼은 "투표 변경"으로)</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 13. 참석자 투표 — 투표 수정 ═══════════════════════ -->
+<div id="screen-13" class="screen" data-scenario="vote-4">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      13. 참석자 투표 — 투표 수정 (이미 투표한 기기)
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg">
+
+        <div class="text-center mb-4">
+          <div class="text-sm font-bold">오늘 저녁 뭐 먹지?</div>
+          <div class="text-xs mt-1 w-chip inline-block">42분 남음</div>
+          <div class="text-xs mt-2" style="color:var(--w-muted)">이미 투표했어요 · 마감 전까지 바꿀 수 있어요</div>
+        </div>
+
+        <div class="flex flex-col gap-2 mb-4">
+          <div class="w-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <input type="checkbox" checked>
+              <span class="text-sm font-bold flex-1">숯불향 강남점</span>
+              <span class="text-xs font-bold">5표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:70%"></div></div>
+          </div>
+          <div class="w-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <input type="checkbox">
+              <span class="text-sm font-bold flex-1">이자카야 온기</span>
+              <span class="text-xs font-bold">3표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:42%"></div></div>
+          </div>
+          <div class="w-card p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <input type="checkbox" checked>
+              <span class="text-sm font-bold flex-1">호프집 강남불빛</span>
+              <span class="text-xs font-bold">2표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:28%"></div></div>
+          </div>
+        </div>
+
+        <button class="w-btn w-btn-primary w-full">투표 변경</button>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>이 기기로 이미 제출한 적 있는 참석자가 같은 링크로 다시 들어온 상태. 직전 선택(숯불향 강남점, 호프집 강남불빛)이 미리 체크되어 있다.</p>
+        <ul>
+          <li>트리거: 이미 투표를 제출한 기기로 같은 투표 링크 재접속 (제한시간 안)</li>
+          <li>인터랙션: 체크 해제/추가로 선택을 바꾼 뒤 "투표 변경" 클릭 → 이전 선택은 득표에서 빠지고 새 선택이 반영된다</li>
+          <li>전환: 없음 — 같은 화면에서 득표수만 갱신. 제한시간이 지나면 마감 화면(14) 상태로 바뀐다</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════ 14. 참석자 투표 — 마감 ═══════════════════════ -->
+<div id="screen-14" class="screen" data-scenario="vote-5">
+  <div class="screen-content @container max-w-6xl mx-auto p-6">
+
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      14. 참석자 투표 — 마감
+    </h2>
+
+    <div class="@container">
+      <div class="max-w-md mx-auto @md:max-w-lg">
+
+        <div class="text-center mb-4">
+          <div class="text-sm font-bold">오늘 저녁 뭐 먹지?</div>
+          <div class="text-xs mt-1 w-chip inline-block">투표가 마감되었어요</div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <div class="w-card p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-bold">숯불향 강남점</span>
+              <span class="text-xs font-bold">5표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:70%"></div></div>
+          </div>
+          <div class="w-card p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-bold">이자카야 온기</span>
+              <span class="text-xs font-bold">3표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:42%"></div></div>
+          </div>
+          <div class="w-card p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-bold">호프집 강남불빛</span>
+              <span class="text-xs font-bold">2표</span>
+            </div>
+            <div class="w-bar-track"><div class="w-bar-fill" style="width:28%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>제한시간이 지난 뒤 투표 링크에 접속했을 때의 상태 — 아직 투표하지 않았던 기기, 이미 투표했던 기기 모두 동일하게 보인다.</p>
+        <ul>
+          <li>트리거: 제한시간 경과 후 투표 링크 접속 (누구든)</li>
+          <li>인터랙션: 체크박스·투표 버튼이 아예 보이지 않는다. 후보별 최종 득표수만 열람 가능</li>
+          <li>전환: 없음 — 더는 상태가 바뀌지 않는 최종 화면</li>
+        </ul>
+      </details>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var currentScreen = 0;
+var screenIds = [];
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('screen-' + id).classList.add('active');
+  document.querySelectorAll('nav button[id^="nav-"]').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('nav-' + id).classList.add('active');
+  currentScreen = screenIds.indexOf(id);
+}
+
+function setViewport(mode) {
+  document.body.classList.remove('viewport-mobile', 'viewport-desktop');
+  document.body.classList.add('viewport-' + mode);
+  document.querySelectorAll('.vp-toggle button').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('vp-' + mode).classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('nav button[id^="nav-"]').forEach(function(b) {
+    screenIds.push(parseInt(b.id.replace('nav-', '')));
+  });
+  var first = document.querySelector('nav button[id^="nav-"]');
+  if (first) first.click();
+  lucide.createIcons();
+});
+</script>
+</body>
+</html>
