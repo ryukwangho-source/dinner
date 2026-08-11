@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VenueCard } from "@/components/venue/venue-card";
@@ -24,6 +25,21 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
       else next.delete(id);
       return next;
     });
+  }
+
+  async function handleSave() {
+    const venueIds = Array.from(selected);
+    try {
+      const res = await fetch("/api/saved", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ venueIds }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      toast.success(`${venueIds.length}곳을 저장했어요`);
+    } catch {
+      toast.error("저장에 실패했어요");
+    }
   }
 
   return (
@@ -56,7 +72,7 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
         <span className="self-center text-xs text-muted-foreground @md:mr-auto">
           {selected.size}곳 선택됨
         </span>
-        <Button variant="outline" disabled={selected.size === 0}>
+        <Button variant="outline" disabled={selected.size === 0} onClick={handleSave}>
           선택 저장
         </Button>
         <Button variant="outline">카톡 공유</Button>

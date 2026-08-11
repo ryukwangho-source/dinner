@@ -1,8 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { ResultList } from "@/components/venue/result-list";
 import type { RankedVenue } from "@/types/recommendation";
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
 
 function makeVenue(id: string, price: number, overrides: Partial<RankedVenue["venue"]> = {}) {
   return {
@@ -27,6 +32,37 @@ const fiveResults: RankedVenue[] = [
 ];
 
 describe("ResultList", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [{ id: "s1" }, { id: "s2" }],
+      }),
+    );
+  });
+
+  it("카드 2개 체크 후 선택 저장 클릭 → 선택된 venueId로 저장 API가 호출되고 완료 토스트가 뜬다", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
+    );
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+    await user.click(checkboxes[1]);
+    await user.click(screen.getByRole("button", { name: "선택 저장" }));
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/saved",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ venueIds: ["a", "b"] }),
+      }),
+    );
+    expect(toast.success).toHaveBeenCalledWith("2곳을 저장했어요");
+  });
+
   it("카드가 결과 개수만큼 렌더된다", () => {
     render(
       <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,

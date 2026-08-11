@@ -145,3 +145,8 @@ export const REGIONS: readonly string[] = Array.from(
 export function getVenuesByRegion(region: string): Venue[] {
   return VENUES.filter((v) => v.region === region);
 }
+
+export function getVenuesByIds(ids: string[]): Venue[] {
+  const idSet = new Set(ids);
+  return VENUES.filter((v) => idSet.has(v.id));
+}
