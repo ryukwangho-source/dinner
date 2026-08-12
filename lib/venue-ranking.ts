@@ -24,10 +24,9 @@ function compareOverBudget(a: Venue, b: Venue, budgetPerPerson: number): number 
  * 예산 이내 장소가 항상 예산 초과 장소보다 먼저 오도록 1차 분리한 뒤,
  * 이내 그룹은 평점→리뷰수→조회수(예산 근접도 tie-break) 순, 초과 그룹은
  * 예산에 가까운 순(spec 시나리오 3)으로 각각 정렬하고 합쳐 상위 5곳을 반환한다.
+ * 소스 무관 순수 함수 — 시드 데이터든 실시간 생성 후보든 동일하게 적용한다.
  */
-export function rankVenues(region: string, budgetPerPerson: number): RankedVenue[] {
-  const venues = getVenuesByRegion(region);
-
+export function rankVenueCandidates(venues: Venue[], budgetPerPerson: number): RankedVenue[] {
   const within = venues
     .filter((v) => v.pricePerPerson <= budgetPerPerson)
     .sort((a, b) => compareWithinBudget(a, b, budgetPerPerson));
@@ -38,4 +37,9 @@ export function rankVenues(region: string, budgetPerPerson: number): RankedVenue
   return [...within, ...over]
     .slice(0, TOP_N)
     .map((venue) => ({ venue, withinBudget: venue.pricePerPerson <= budgetPerPerson }));
+}
+
+/** 지역 시드 데이터 기준 추천 (기존 venue-recommendation 경로) */
+export function rankVenues(region: string, budgetPerPerson: number): RankedVenue[] {
+  return rankVenueCandidates(getVenuesByRegion(region), budgetPerPerson);
 }
