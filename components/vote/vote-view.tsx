@@ -102,9 +102,9 @@ export function VoteView({ voteId }: VoteViewProps) {
       <div className="text-center">
         <div className="text-sm font-bold">회식 투표</div>
         <div className="mt-1 text-xs text-muted-foreground">
-          {formatRemaining(detail.deadlineAt, now)}
+          {detail.isClosed ? "투표가 마감되었어요" : formatRemaining(detail.deadlineAt, now)}
         </div>
-        {alreadyVoted && (
+        {!detail.isClosed && alreadyVoted && (
           <div className="mt-2 text-xs text-muted-foreground">
             이미 투표했어요 · 마감 전까지 바꿀 수 있어요
           </div>
@@ -116,11 +116,13 @@ export function VoteView({ voteId }: VoteViewProps) {
           <Card key={candidate.id}>
             <CardContent className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={selected.has(candidate.id)}
-                  onCheckedChange={(checked) => toggle(candidate.id, checked === true)}
-                  aria-label={`${candidate.name} 선택`}
-                />
+                {!detail.isClosed && (
+                  <Checkbox
+                    checked={selected.has(candidate.id)}
+                    onCheckedChange={(checked) => toggle(candidate.id, checked === true)}
+                    aria-label={`${candidate.name} 선택`}
+                  />
+                )}
                 <span className="flex-1 text-sm font-bold">{candidate.name}</span>
                 <span className="text-xs font-bold">{candidate.voteCount}표</span>
               </div>
@@ -130,9 +132,11 @@ export function VoteView({ voteId }: VoteViewProps) {
         ))}
       </div>
 
-      <Button disabled={selected.size === 0 || isSubmitting} onClick={handleSubmit}>
-        {alreadyVoted ? "투표 변경" : "투표하기"}
-      </Button>
+      {!detail.isClosed && (
+        <Button disabled={selected.size === 0 || isSubmitting} onClick={handleSubmit}>
+          {alreadyVoted ? "투표 변경" : "투표하기"}
+        </Button>
+      )}
     </div>
   );
 }

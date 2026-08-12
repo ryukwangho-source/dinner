@@ -146,6 +146,39 @@ describe("VoteView", () => {
     expect(screen.getByRole("button", { name: "투표하기" })).toBeDisabled();
   });
 
+  it("마감된 투표 접속 → 체크박스·제출 버튼 없이 최종 득표수만 표시된다", async () => {
+    mockServer({
+      ...baseDetail(),
+      isClosed: true,
+      candidates: [
+        { id: "cand-a", venueId: "a", name: "숯불향 오산역점", pricePerPerson: 28000, voteCount: 3 },
+        { id: "cand-b", venueId: "b", name: "이자카야 온기 오산", pricePerPerson: 29500, voteCount: 1 },
+      ],
+    });
+    render(<VoteView voteId="vote-1" />);
+    await screen.findByText("숯불향 오산역점");
+
+    expect(screen.getByText("투표가 마감되었어요")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "투표하기" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "투표 변경" })).not.toBeInTheDocument();
+    expect(screen.getByText("3표")).toBeInTheDocument();
+    expect(screen.getByText("1표")).toBeInTheDocument();
+  });
+
+  it("마감 전 이미 투표했던 기기가 마감 후 접속해도 선택을 바꿀 UI가 없다", async () => {
+    mockServer({
+      ...baseDetail(),
+      isClosed: true,
+      mySelection: ["cand-a"],
+    });
+    render(<VoteView voteId="vote-1" />);
+    await screen.findByText("숯불향 오산역점");
+
+    expect(screen.getByText("투표가 마감되었어요")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
   it("존재하지 않는 투표 id면 찾을 수 없다는 안내가 표시된다", async () => {
     mockServer("404");
     render(<VoteView voteId="no-such-id" />);
