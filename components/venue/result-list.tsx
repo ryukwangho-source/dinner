@@ -40,15 +40,18 @@ export function ResultList({
     });
   }
 
+  function selectedVenues() {
+    return results.filter((r) => selected.has(r.venue.id)).map((r) => r.venue);
+  }
+
   async function handleSave() {
     if (isSaving) return;
     setIsSaving(true);
-    const venueIds = Array.from(selected);
     try {
       const res = await fetch("/api/saved", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ venueIds }),
+        body: JSON.stringify({ venues: selectedVenues() }),
       });
       if (!res.ok) throw new Error("save failed");
       const saved = (await res.json()) as unknown[];
@@ -71,8 +74,8 @@ export function ResultList({
       toast.error("투표할 장소를 선택해주세요");
       return;
     }
-    const venueIds = Array.from(selected).join(",");
-    router.push(`/vote/new?venueIds=${encodeURIComponent(venueIds)}`);
+    const venues = JSON.stringify(selectedVenues());
+    router.push(`/vote/new?venues=${encodeURIComponent(venues)}`);
   }
 
   return (

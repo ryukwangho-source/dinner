@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { getVenuesByIds } from "@/config/venues";
+import { venueSchema } from "@/types/recommendation";
 import { getSavedVenueStore } from "@/services/saved-venue-store";
 
 const saveBodySchema = z.object({
-  venueIds: z.array(z.string()).min(1),
+  venues: z.array(venueSchema).min(1),
 });
 
 export async function GET() {
@@ -23,12 +23,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "저장할 장소를 선택해주세요" }, { status: 400 });
   }
 
-  const venues = getVenuesByIds(parsed.data.venueIds);
-  if (venues.length === 0) {
-    return Response.json({ error: "저장할 장소를 선택해주세요" }, { status: 400 });
-  }
-
-  const saved = getSavedVenueStore().saveMany(venues);
+  const uniqueById = new Map(parsed.data.venues.map((v) => [v.id, v]));
+  const saved = getSavedVenueStore().saveMany(Array.from(uniqueById.values()));
   return Response.json(saved, { status: 201 });
 }
 

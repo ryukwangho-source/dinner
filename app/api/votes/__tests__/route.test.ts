@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createVoteStore, type VoteStore } from "@/services/vote-store";
+import type { Venue } from "@/types/recommendation";
 
 let store: VoteStore;
 
@@ -9,6 +10,19 @@ vi.mock("@/services/vote-store", async (importOriginal) => {
 });
 
 const { GET: listVotes, POST: createVote } = await import("../route");
+
+function makeVenue(id: string): Venue {
+  return {
+    id,
+    name: `장소-${id}`,
+    category: "고깃집",
+    region: "오산역",
+    rating: 4.6,
+    reviewCount: 1204,
+    viewCount: 8900,
+    pricePerPerson: 28000,
+  };
+}
 
 function jsonRequest(body: unknown) {
   return new Request("http://localhost/api/votes", {
@@ -23,9 +37,9 @@ beforeEach(() => {
 });
 
 describe("/api/votes", () => {
-  it("POST 시드에 존재하는 장소 id들과 제한시간으로 생성 → 201 + id·deadlineAt, GET 목록에 나타난다", async () => {
+  it("POST로 venue 전체 객체들과 제한시간으로 생성 → 201 + id·deadlineAt, GET 목록에 나타난다 (정적 배열에 없는 장소도 가능)", async () => {
     const res = await createVote(
-      jsonRequest({ venueIds: ["osan-charcoal", "osan-hof"], duration: "1h" }),
+      jsonRequest({ venues: [makeVenue("gen-1"), makeVenue("gen-2")], duration: "1h" }),
     );
     expect(res.status).toBe(201);
     const body = await res.json();
@@ -38,33 +52,36 @@ describe("/api/votes", () => {
     expect(list[0].candidateCount).toBe(2);
   });
 
-  it("빈 venueIds → 400", async () => {
-    const res = await createVote(jsonRequest({ venueIds: [], duration: "1h" }));
+  it("빈 venues → 400", async () => {
+    const res = await createVote(jsonRequest({ venues: [], duration: "1h" }));
     expect(res.status).toBe(400);
   });
 
-  it("존재하지 않는 venueId만 있으면 400", async () => {
-    const res = await createVote(jsonRequest({ venueIds: ["no-such-venue"], duration: "1h" }));
-    expect(res.status).toBe(400);
-  });
-
-  it("일부만 존재하지 않는 venueId면 조용히 일부만 생성하지 않고 400", async () => {
+  it("venue 형태가 불완전하면(필수 필드 누락) 400", async () => {
     const res = await createVote(
-      jsonRequest({ venueIds: ["osan-charcoal", "no-such-venue"], duration: "1h" }),
+      jsonRequest({ venues: [{ id: "gen-1", name: "장소" }], duration: "1h" }),
     );
     expect(res.status).toBe(400);
+  });
+
+  it("같은 id의 venue가 중복 전송되면 후보 하나로만 등록된다", async () => {
+    const res = await createVote(
+      jsonRequest({ venues: [makeVenue("gen-1"), makeVenue("gen-1")], duration: "1h" }),
+    );
+    const body = await res.json();
 
     const listRes = await listVotes();
-    expect(await listRes.json()).toHaveLength(0);
+    const list = await listRes.json();
+    expect(list.find((v: { id: string }) => v.id === body.id)?.candidateCount).toBe(1);
   });
 
   it("유효하지 않은 duration → 400", async () => {
-    const res = await createVote(jsonRequest({ venueIds: ["osan-charcoal"], duration: "5d" }));
+    const res = await createVote(jsonRequest({ venues: [makeVenue("gen-1")], duration: "5d" }));
     expect(res.status).toBe(400);
   });
 
   it("인증 헤더·쿠키 없이 호출해도 성공한다 (로그인 요구 없음)", async () => {
-    const res = await createVote(jsonRequest({ venueIds: ["osan-charcoal"], duration: "30m" }));
+    const res = await createVote(jsonRequest({ venues: [makeVenue("gen-1")], duration: "30m" }));
     expect(res.status).toBe(201);
   });
 });

@@ -75,7 +75,7 @@ describe("CreateVoteForm", () => {
       "/api/votes",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ venueIds: ["a", "b", "c"], duration: "1h" }),
+        body: JSON.stringify({ venues: candidates, duration: "1h" }),
       }),
     );
     expect(await screen.findByText("http://localhost:3110/vote/vote-1")).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("CreateVoteForm", () => {
       "/api/votes",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ venueIds: ["a", "b", "c"], duration: "custom", customMinutes: 90 }),
+        body: JSON.stringify({ venues: candidates, duration: "custom", customMinutes: 90 }),
       }),
     );
     expect(await screen.findByText("http://localhost:3110/vote/vote-1")).toBeInTheDocument();

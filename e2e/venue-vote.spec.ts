@@ -49,8 +49,21 @@ test("선택없이 투표만들기 시도→안내→투표 생성→링크 접�
 
 test("이미 마감된 투표 링크 접속 → 투표 UI 없이 최종 득표수만 보인다", async ({ page, request }) => {
   // API로 정상 투표를 만든 뒤, e2e DB에서 마감 시각을 과거로 직접 되돌린다.
+  const venue = (id: string, name: string) => ({
+    id,
+    name,
+    category: "고깃집",
+    region: "오산역",
+    rating: 4.5,
+    reviewCount: 500,
+    viewCount: 4000,
+    pricePerPerson: 28000,
+  });
   const res = await request.post("/api/votes", {
-    data: { venueIds: ["osan-charcoal", "osan-hof"], duration: "1h" },
+    data: {
+      venues: [venue("osan-charcoal", "숯불향 오산역점"), venue("osan-hof", "호프집 오산불빛")],
+      duration: "1h",
+    },
   });
   const { id } = await res.json();
 

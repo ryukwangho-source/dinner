@@ -1,15 +1,23 @@
 import { redirect } from "next/navigation";
-import { getVenuesByIds } from "@/config/venues";
+import { z } from "zod";
+import { venueSchema } from "@/types/recommendation";
 import { CreateVoteForm } from "@/components/vote/create-vote-form";
 
 type Props = {
-  searchParams: Promise<{ venueIds?: string }>;
+  searchParams: Promise<{ venues?: string }>;
 };
 
+const venuesQuerySchema = z.array(venueSchema);
+
 export default async function VoteNewPage({ searchParams }: Props) {
-  const { venueIds } = await searchParams;
-  const ids = venueIds ? venueIds.split(",").filter(Boolean) : [];
-  const candidates = getVenuesByIds(ids);
+  const { venues } = await searchParams;
+
+  let candidates: z.infer<typeof venuesQuerySchema> = [];
+  try {
+    candidates = venuesQuerySchema.parse(JSON.parse(venues ?? "[]"));
+  } catch {
+    candidates = [];
+  }
 
   if (candidates.length === 0) {
     redirect("/");

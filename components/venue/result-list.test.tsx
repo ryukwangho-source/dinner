@@ -75,7 +75,7 @@ describe("ResultList", () => {
     );
   });
 
-  it("카드 2개 체크 후 선택 저장 클릭 → 선택된 venueId로 저장 API가 호출되고 완료 토스트가 뜬다", async () => {
+  it("카드 2개 체크 후 선택 저장 클릭 → 선택된 venue 전체 객체로 저장 API가 호출되고 완료 토스트가 뜬다", async () => {
     const user = userEvent.setup();
     renderList();
     const checkboxes = screen.getAllByRole("checkbox");
@@ -87,7 +87,7 @@ describe("ResultList", () => {
       "/api/saved",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ venueIds: ["a", "b"] }),
+        body: JSON.stringify({ venues: [fiveResults[0].venue, fiveResults[1].venue] }),
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("2곳을 저장했어요");
@@ -148,7 +148,7 @@ describe("ResultList", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("카드 선택 후 투표 만들기 클릭 → /vote/new로 선택된 venueId와 함께 이동한다", async () => {
+  it("카드 선택 후 투표 만들기 클릭 → /vote/new로 선택된 venue 전체 객체와 함께 이동한다", async () => {
     const user = userEvent.setup();
     renderList();
     const checkboxes = screen.getAllByRole("checkbox");
@@ -156,7 +156,8 @@ describe("ResultList", () => {
     await user.click(checkboxes[2]);
     await user.click(screen.getByRole("button", { name: "투표 만들기" }));
 
-    expect(pushMock).toHaveBeenCalledWith("/vote/new?venueIds=a%2Cc");
+    const expectedVenues = JSON.stringify([fiveResults[0].venue, fiveResults[2].venue]);
+    expect(pushMock).toHaveBeenCalledWith(`/vote/new?venues=${encodeURIComponent(expectedVenues)}`);
   });
 
   it("카드 체크박스를 클릭하면 선택 개수가 서버 왕복 없이 즉시 갱신된다", async () => {

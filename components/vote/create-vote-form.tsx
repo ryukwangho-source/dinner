@@ -45,7 +45,7 @@ export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          venueIds: candidates.map((c) => c.id),
+          venues: candidates,
           duration,
           ...(duration === "custom" ? { customMinutes: parsedCustomMinutes } : {}),
         }),
