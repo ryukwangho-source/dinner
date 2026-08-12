@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,8 +22,8 @@ export function VoteView({ voteId }: VoteViewProps) {
   const [notFound, setNotFound] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const hasInitializedSelection = useRef(false);
 
   const fetchDetail = useCallback(async () => {
     const deviceId = getDeviceId();
@@ -47,6 +47,15 @@ export function VoteView({ voteId }: VoteViewProps) {
     return () => clearInterval(tick);
   }, []);
 
+  // mySelection은 이 기기의 최근 제출을 그대로 반영한다 — 최초 진입 시 한 번만 체크박스에
+  // 반영하고, 이후 폴링으로 detail이 갱신돼도 사용자가 편집 중인 선택을 덮어쓰지 않는다.
+  useEffect(() => {
+    if (detail && !hasInitializedSelection.current) {
+      setSelected(new Set(detail.mySelection));
+      hasInitializedSelection.current = true;
+    }
+  }, [detail]);
+
   function toggle(candidateId: string, checked: boolean) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -67,7 +76,6 @@ export function VoteView({ voteId }: VoteViewProps) {
         body: JSON.stringify({ deviceId, selectedCandidateIds: Array.from(selected) }),
       });
       if (!res.ok) throw new Error("submit failed");
-      setHasSubmitted(true);
       await fetchDetail();
     } catch {
       toast.error("투표에 실패했어요");
@@ -86,6 +94,7 @@ export function VoteView({ voteId }: VoteViewProps) {
 
   if (!detail) return null;
 
+  const alreadyVoted = detail.mySelection.length > 0;
   const totalVotes = detail.candidates.reduce((sum, c) => sum + c.voteCount, 0);
 
   return (
@@ -95,6 +104,11 @@ export function VoteView({ voteId }: VoteViewProps) {
         <div className="mt-1 text-xs text-muted-foreground">
           {formatRemaining(detail.deadlineAt, now)}
         </div>
+        {alreadyVoted && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            이미 투표했어요 · 마감 전까지 바꿀 수 있어요
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -102,13 +116,11 @@ export function VoteView({ voteId }: VoteViewProps) {
           <Card key={candidate.id}>
             <CardContent className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                {!hasSubmitted && (
-                  <Checkbox
-                    checked={selected.has(candidate.id)}
-                    onCheckedChange={(checked) => toggle(candidate.id, checked === true)}
-                    aria-label={`${candidate.name} 선택`}
-                  />
-                )}
+                <Checkbox
+                  checked={selected.has(candidate.id)}
+                  onCheckedChange={(checked) => toggle(candidate.id, checked === true)}
+                  aria-label={`${candidate.name} 선택`}
+                />
                 <span className="flex-1 text-sm font-bold">{candidate.name}</span>
                 <span className="text-xs font-bold">{candidate.voteCount}표</span>
               </div>
@@ -118,13 +130,9 @@ export function VoteView({ voteId }: VoteViewProps) {
         ))}
       </div>
 
-      {hasSubmitted ? (
-        <div className="text-center text-sm text-muted-foreground">투표 완료</div>
-      ) : (
-        <Button disabled={selected.size === 0 || isSubmitting} onClick={handleSubmit}>
-          투표하기
-        </Button>
-      )}
+      <Button disabled={selected.size === 0 || isSubmitting} onClick={handleSubmit}>
+        {alreadyVoted ? "투표 변경" : "투표하기"}
+      </Button>
     </div>
   );
 }
