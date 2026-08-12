@@ -47,6 +47,14 @@ Ideate → Define → Sketch → Plan → Build → Compound
 | `bun run test` | Vitest |
 | `bun run test:watch` | Vitest watch |
 | `bun run test:e2e` | Playwright |
+| `bun run lint` | ESLint (flat config 전체) — `bun run build`의 내장 린트보다 범위가 넓다. Task 완료 조건에 반드시 포함한다 (build만 돌리고 넘어가면 lint 실패를 놓친다) |
+
+### 폴링·타이머 있는 컴포넌트 테스트
+- `setInterval` 등으로 폴링·재시도하는 컴포넌트는 테스트 시작부터 `vi.useFakeTimers()`를 쓴다. real timer로 두면 interval이 테스트 실행 중 실제로 발동해 순차 mock 큐를 어긋나게 만든다.
+- mock은 "호출 순서대로 값을 내주는 큐"가 아니라 "현재 서버 상태를 들고 있다가 요청에 맞춰 읽고 쓰는 작은 가짜 서버 함수"로 작성한다 — 실제 폴링·재제출 흐름을 그대로 흉내낼 수 있고, 호출 횟수·순서에 결합되지 않는다.
+
+### 클라이언트가 보낸 id 배열 검증
+- API가 id 배열(예: `venueIds`, `candidateIds`)을 받으면 **존재 검증과 중복 제거를 둘 다** 한다. 존재 검증만 하면 같은 id를 여러 번 보내 집계(득표수 등)를 부풀리는 것을 막지 못한다.
 
 ## Architecture
 
