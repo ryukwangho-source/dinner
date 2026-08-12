@@ -11,4 +11,10 @@ describe("naverMapSearchUrl", () => {
     const url = naverMapSearchUrl("이자카야 온기", "강남");
     expect(url).toContain(encodeURIComponent("강남 이자카야 온기"));
   });
+
+  it("장소명에 지역명이 이미 포함되어 있으면 지역명을 중복해서 붙이지 않는다", () => {
+    const url = naverMapSearchUrl("한우마당 동탄", "동탄역");
+    expect(url).toContain(encodeURIComponent("한우마당 동탄"));
+    expect(url).not.toContain(encodeURIComponent("동탄역 한우마당 동탄"));
+  });
 });

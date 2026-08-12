@@ -49,7 +49,7 @@ describe("VenueCard", () => {
     const link = screen.getByRole("link", { name: "네이버 지도에서 보기" });
     expect(link).toHaveAttribute(
       "href",
-      `https://map.naver.com/p/search/${encodeURIComponent("강남역 숯불향 강남점")}`,
+      `https://map.naver.com/p/search/${encodeURIComponent("숯불향 강남점")}`,
     );
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));

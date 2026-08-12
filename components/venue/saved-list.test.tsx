@@ -57,7 +57,7 @@ describe("SavedList", () => {
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute(
       "href",
-      `https://map.naver.com/p/search/${encodeURIComponent("강남역 호프집 강남불빛")}`,
+      `https://map.naver.com/p/search/${encodeURIComponent("호프집 강남불빛")}`,
     );
     expect(links[0]).toHaveAttribute("target", "_blank");
   });

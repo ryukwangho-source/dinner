@@ -1,10 +1,12 @@
+import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { RankedVenue } from "@/types/recommendation";
 
-/** 추천 결과 요약 텍스트 (카톡 등 공유용) */
+/** 추천 결과 요약 텍스트 (카톡 등 공유용). 각 장소마다 네이버 검색 링크를 함께 담는다. */
 export function buildShareText(results: RankedVenue[]): string {
   const lines: string[] = ["📍 회식 장소 추천"];
   results.forEach(({ venue }, i) => {
     lines.push(`${i + 1}. ${venue.name} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`);
+    lines.push(naverMapSearchUrl(venue.name, venue.region));
   });
   return lines.join("\n");
 }

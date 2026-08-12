@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildShareText, copyVoteLink, shareVenues, shareVoteLink } from "@/lib/venue-share";
+import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { RankedVenue } from "@/types/recommendation";
 
 function makeVenue(id: string, name: string, price: number) {
@@ -28,6 +29,13 @@ describe("buildShareText", () => {
     const text = buildShareText(results);
     for (const { venue } of results) {
       expect(text).toContain(venue.name);
+    }
+  });
+
+  it("각 장소마다 네이버 검색 링크가 함께 포함된다", () => {
+    const text = buildShareText(results);
+    for (const { venue } of results) {
+      expect(text).toContain(naverMapSearchUrl(venue.name, venue.region));
     }
   });
 });
