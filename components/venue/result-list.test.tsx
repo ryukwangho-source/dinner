@@ -14,6 +14,11 @@ vi.mock("@/lib/venue-share", () => ({
   shareVenues: vi.fn(),
 }));
 
+const pushMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
 function makeVenue(id: string, price: number, overrides: Partial<RankedVenue["venue"]> = {}) {
   return {
     id,
@@ -39,6 +44,7 @@ const fiveResults: RankedVenue[] = [
 describe("ResultList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pushMock.mockClear();
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -124,6 +130,30 @@ describe("ResultList", () => {
     );
     expect(screen.getByRole("button", { name: "선택 저장" })).toBeDisabled();
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("선택 없이 투표 만들기 클릭 → 안내 토스트가 뜨고 이동하지 않는다", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
+    );
+    await user.click(screen.getByRole("button", { name: "투표 만들기" }));
+
+    expect(toast.error).toHaveBeenCalledWith("투표할 장소를 선택해주세요");
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("카드 선택 후 투표 만들기 클릭 → /vote/new로 선택된 venueId와 함께 이동한다", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
+    );
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+    await user.click(checkboxes[2]);
+    await user.click(screen.getByRole("button", { name: "투표 만들기" }));
+
+    expect(pushMock).toHaveBeenCalledWith("/vote/new?venueIds=a%2Cc");
   });
 
   it("카드 체크박스를 클릭하면 선택 개수가 서버 왕복 없이 즉시 갱신된다", async () => {

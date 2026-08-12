@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +17,7 @@ export interface ResultListProps {
 }
 
 export function ResultList({ region, partySize, budgetPerPerson, results }: ResultListProps) {
+  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const noneWithinBudget = results.length > 0 && results.every((r) => !r.withinBudget);
@@ -53,6 +55,15 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
     const result = await shareVenues(results);
     if (result === "copied") toast.success("클립보드에 복사했어요");
     if (result === "failed") toast.error("공유에 실패했어요");
+  }
+
+  function handleCreateVote() {
+    if (selected.size === 0) {
+      toast.error("투표할 장소를 선택해주세요");
+      return;
+    }
+    const venueIds = Array.from(selected).join(",");
+    router.push(`/vote/new?venueIds=${encodeURIComponent(venueIds)}`);
   }
 
   return (
@@ -94,6 +105,9 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
         </Button>
         <Button variant="outline" onClick={handleShare}>
           카톡 공유
+        </Button>
+        <Button variant="outline" onClick={handleCreateVote}>
+          투표 만들기
         </Button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildShareText, shareVenues } from "@/lib/venue-share";
+import { buildShareText, copyVoteLink, shareVenues, shareVoteLink } from "@/lib/venue-share";
 import type { RankedVenue } from "@/types/recommendation";
 
 function makeVenue(id: string, name: string, price: number) {
@@ -51,5 +51,50 @@ describe("shareVenues", () => {
     const result = await shareVenues(results);
     expect(writeText).toHaveBeenCalled();
     expect(result).toBe("copied");
+  });
+});
+
+describe("shareVoteLink", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("navigator.share가 있으면 그 URL로 호출된다", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { share });
+    const result = await shareVoteLink("https://dinner.example/vote/abc");
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "https://dinner.example/vote/abc" }),
+    );
+    expect(result).toBe("shared");
+  });
+
+  it("navigator.share가 없으면 URL이 클립보드에 복사된다", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const result = await shareVoteLink("https://dinner.example/vote/abc");
+    expect(writeText).toHaveBeenCalledWith("https://dinner.example/vote/abc");
+    expect(result).toBe("copied");
+  });
+});
+
+describe("copyVoteLink", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("navigator.share 지원 여부와 무관하게 항상 클립보드로 복사한다", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { share, clipboard: { writeText } });
+    const result = await copyVoteLink("https://dinner.example/vote/abc");
+    expect(writeText).toHaveBeenCalledWith("https://dinner.example/vote/abc");
+    expect(share).not.toHaveBeenCalled();
+    expect(result).toBe(true);
+  });
+
+  it("클립보드 API가 없으면 false를 반환한다", async () => {
+    vi.stubGlobal("navigator", {});
+    expect(await copyVoteLink("https://dinner.example/vote/abc")).toBe(false);
   });
 });
