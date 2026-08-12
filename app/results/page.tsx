@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { rankVenues } from "@/lib/venue-ranking";
 import { ResultList } from "@/components/venue/result-list";
 import { REGIONS } from "@/config/venues";
+import { getVoteStore } from "@/services/vote-store";
 
 type Props = {
   searchParams: Promise<{ region?: string; people?: string; budget?: string }>;
@@ -25,6 +26,7 @@ export default async function ResultsPage({ searchParams }: Props) {
   }
 
   const results = rankVenues(region, budgetPerPerson);
+  const votes = getVoteStore().listAll();
 
   return (
     <ResultList
@@ -32,6 +34,7 @@ export default async function ResultsPage({ searchParams }: Props) {
       partySize={partySize}
       budgetPerPerson={budgetPerPerson}
       results={results}
+      votes={votes}
     />
   );
 }

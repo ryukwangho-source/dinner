@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ResultList } from "@/components/venue/result-list";
 import { shareVenues } from "@/lib/venue-share";
 import type { RankedVenue } from "@/types/recommendation";
+import type { VoteSummary } from "@/types/vote";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -41,6 +42,26 @@ const fiveResults: RankedVenue[] = [
   { venue: makeVenue("e", 22000), withinBudget: true },
 ];
 
+function renderList(
+  overrides: Partial<{
+    results: RankedVenue[];
+    votes: VoteSummary[];
+    region: string;
+    partySize: number;
+    budgetPerPerson: number;
+  }> = {},
+) {
+  return render(
+    <ResultList
+      region={overrides.region ?? "강남역"}
+      partySize={overrides.partySize ?? 8}
+      budgetPerPerson={overrides.budgetPerPerson ?? 30000}
+      results={overrides.results ?? fiveResults}
+      votes={overrides.votes ?? []}
+    />,
+  );
+}
+
 describe("ResultList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,9 +77,7 @@ describe("ResultList", () => {
 
   it("카드 2개 체크 후 선택 저장 클릭 → 선택된 venueId로 저장 API가 호출되고 완료 토스트가 뜬다", async () => {
     const user = userEvent.setup();
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     const checkboxes = screen.getAllByRole("checkbox");
     await user.click(checkboxes[0]);
     await user.click(checkboxes[1]);
@@ -75,26 +94,20 @@ describe("ResultList", () => {
   });
 
   it("카드가 결과 개수만큼 렌더된다", () => {
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     expect(screen.getAllByRole("checkbox")).toHaveLength(5);
   });
 
   it("예산 이내 후보가 0곳이면 안내 배너가 나타난다", () => {
     const overOnly: RankedVenue[] = fiveResults.map((r) => ({ ...r, withinBudget: false }));
-    render(
-      <ResultList region="판교역" partySize={6} budgetPerPerson={15000} results={overOnly} />,
-    );
+    renderList({ region: "판교역", partySize: 6, budgetPerPerson: 15000, results: overOnly });
     expect(
       screen.getByText("예산에 맞는 장소가 없어 가까운 순으로 보여드려요"),
     ).toBeInTheDocument();
   });
 
   it("예산 이내 후보가 있으면 안내 배너가 없다", () => {
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     expect(
       screen.queryByText("예산에 맞는 장소가 없어 가까운 순으로 보여드려요"),
     ).not.toBeInTheDocument();
@@ -103,9 +116,7 @@ describe("ResultList", () => {
   it("카톡 공유 클릭 → 결과 목록으로 shareVenues를 호출하고, 클립보드 복사 결과면 완료 토스트를 띄운다", async () => {
     vi.mocked(shareVenues).mockResolvedValue("copied");
     const user = userEvent.setup();
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     await user.click(screen.getByRole("button", { name: "카톡 공유" }));
 
     expect(shareVenues).toHaveBeenCalledWith(fiveResults);
@@ -115,9 +126,7 @@ describe("ResultList", () => {
   it("카톡 공유 결과가 shared이면 완료 토스트를 띄우지 않는다", async () => {
     vi.mocked(shareVenues).mockResolvedValue("shared");
     const user = userEvent.setup();
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     await user.click(screen.getByRole("button", { name: "카톡 공유" }));
 
     expect(toast.success).not.toHaveBeenCalled();
@@ -125,18 +134,14 @@ describe("ResultList", () => {
   });
 
   it("선택 없이는 선택 저장 버튼이 비활성화되어 저장 API가 호출되지 않는다", () => {
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     expect(screen.getByRole("button", { name: "선택 저장" })).toBeDisabled();
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it("선택 없이 투표 만들기 클릭 → 안내 토스트가 뜨고 이동하지 않는다", async () => {
     const user = userEvent.setup();
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     await user.click(screen.getByRole("button", { name: "투표 만들기" }));
 
     expect(toast.error).toHaveBeenCalledWith("투표할 장소를 선택해주세요");
@@ -145,9 +150,7 @@ describe("ResultList", () => {
 
   it("카드 선택 후 투표 만들기 클릭 → /vote/new로 선택된 venueId와 함께 이동한다", async () => {
     const user = userEvent.setup();
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     const checkboxes = screen.getAllByRole("checkbox");
     await user.click(checkboxes[0]);
     await user.click(checkboxes[2]);
@@ -158,11 +161,23 @@ describe("ResultList", () => {
 
   it("카드 체크박스를 클릭하면 선택 개수가 서버 왕복 없이 즉시 갱신된다", async () => {
     const user = userEvent.setup();
-    render(
-      <ResultList region="강남역" partySize={8} budgetPerPerson={30000} results={fiveResults} />,
-    );
+    renderList();
     expect(screen.getByText("0곳 선택됨")).toBeInTheDocument();
     await user.click(screen.getAllByRole("checkbox")[0]);
     expect(screen.getByText("1곳 선택됨")).toBeInTheDocument();
+  });
+
+  it("진행 중인 투표 목록을 함께 렌더한다", () => {
+    const votes: VoteSummary[] = [
+      {
+        id: "vote-1",
+        candidateCount: 3,
+        status: "open",
+        createdAt: "2026-08-12T13:00:00.000Z",
+        deadlineAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+    ];
+    renderList({ votes });
+    expect(screen.getByRole("link", { name: /후보 3곳/ })).toHaveAttribute("href", "/vote/vote-1");
   });
 });

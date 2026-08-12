@@ -6,17 +6,26 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VenueCard } from "@/components/venue/venue-card";
+import { ActiveVotesList } from "@/components/vote/active-votes-list";
 import { shareVenues } from "@/lib/venue-share";
 import type { RankedVenue } from "@/types/recommendation";
+import type { VoteSummary } from "@/types/vote";
 
 export interface ResultListProps {
   region: string;
   partySize: number;
   budgetPerPerson: number;
   results: RankedVenue[];
+  votes: VoteSummary[];
 }
 
-export function ResultList({ region, partySize, budgetPerPerson, results }: ResultListProps) {
+export function ResultList({
+  region,
+  partySize,
+  budgetPerPerson,
+  results,
+  votes,
+}: ResultListProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
@@ -110,6 +119,8 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
           투표 만들기
         </Button>
       </div>
+
+      <ActiveVotesList votes={votes} />
     </div>
   );
 }
