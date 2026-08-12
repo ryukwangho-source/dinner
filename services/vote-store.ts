@@ -17,6 +17,7 @@ interface VoteCandidateRow {
   vote_id: string;
   venue_id: string;
   name: string;
+  region: string;
   price_per_person: number;
 }
 
@@ -50,6 +51,7 @@ export function createVoteStore(dbPath: string) {
       vote_id TEXT NOT NULL,
       venue_id TEXT NOT NULL,
       name TEXT NOT NULL,
+      region TEXT NOT NULL,
       price_per_person INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS vote_submissions (
@@ -65,7 +67,7 @@ export function createVoteStore(dbPath: string) {
     "INSERT INTO votes (id, deadline_at, created_at) VALUES (?, ?, ?)",
   );
   const insertCandidate = db.prepare(
-    "INSERT INTO vote_candidates (id, vote_id, venue_id, name, price_per_person) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO vote_candidates (id, vote_id, venue_id, name, region, price_per_person) VALUES (?, ?, ?, ?, ?, ?)",
   );
   const upsertSubmission = db.prepare(`
     INSERT INTO vote_submissions (vote_id, device_id, selected_candidate_ids, submitted_at)
@@ -87,7 +89,14 @@ export function createVoteStore(dbPath: string) {
       const tx = db.transaction(() => {
         insertVote.run(id, deadlineAt, createdAt);
         for (const venue of candidates) {
-          insertCandidate.run(randomUUID(), id, venue.id, venue.name, venue.pricePerPerson);
+          insertCandidate.run(
+            randomUUID(),
+            id,
+            venue.id,
+            venue.name,
+            venue.region,
+            venue.pricePerPerson,
+          );
         }
       });
       tx();
@@ -125,6 +134,7 @@ export function createVoteStore(dbPath: string) {
           id: c.id,
           venueId: c.venue_id,
           name: c.name,
+          region: c.region,
           pricePerPerson: c.price_per_person,
           voteCount: tally.get(c.id) ?? 0,
         })),

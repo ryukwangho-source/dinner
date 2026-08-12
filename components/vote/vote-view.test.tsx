@@ -14,8 +14,8 @@ function baseDetail(): VoteDetail {
     deadlineAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     isClosed: false,
     candidates: [
-      { id: "cand-a", venueId: "a", name: "숯불향 오산역점", pricePerPerson: 28000, voteCount: 0 },
-      { id: "cand-b", venueId: "b", name: "이자카야 온기 오산", pricePerPerson: 29500, voteCount: 0 },
+      { id: "cand-a", venueId: "a", name: "숯불향 오산역점", region: "오산역", pricePerPerson: 28000, voteCount: 0 },
+      { id: "cand-b", venueId: "b", name: "이자카야 온기 오산", region: "오산역", pricePerPerson: 29500, voteCount: 0 },
     ],
     mySelection: [],
   };
@@ -70,6 +70,7 @@ describe("VoteView", () => {
     render(<VoteView voteId="vote-1" />);
     expect(await screen.findByText("숯불향 오산역점")).toBeInTheDocument();
     expect(screen.getByText("이자카야 온기 오산")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "네이버 지도에서 보기" })).toHaveLength(2);
     expect(screen.getAllByText("0표")).toHaveLength(2);
   });
 
@@ -114,9 +115,9 @@ describe("VoteView", () => {
       deadlineAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       isClosed: false,
       candidates: [
-        { id: "cand-a", venueId: "a", name: "A", pricePerPerson: 20000, voteCount: 1 },
-        { id: "cand-b", venueId: "b", name: "B", pricePerPerson: 21000, voteCount: 1 },
-        { id: "cand-c", venueId: "c", name: "C", pricePerPerson: 22000, voteCount: 0 },
+        { id: "cand-a", venueId: "a", name: "A", region: "오산역", pricePerPerson: 20000, voteCount: 1 },
+        { id: "cand-b", venueId: "b", name: "B", region: "오산역", pricePerPerson: 21000, voteCount: 1 },
+        { id: "cand-c", venueId: "c", name: "C", region: "오산역", pricePerPerson: 22000, voteCount: 0 },
       ],
       mySelection: ["cand-a", "cand-b"],
     };
@@ -151,8 +152,8 @@ describe("VoteView", () => {
       ...baseDetail(),
       isClosed: true,
       candidates: [
-        { id: "cand-a", venueId: "a", name: "숯불향 오산역점", pricePerPerson: 28000, voteCount: 3 },
-        { id: "cand-b", venueId: "b", name: "이자카야 온기 오산", pricePerPerson: 29500, voteCount: 1 },
+        { id: "cand-a", venueId: "a", name: "숯불향 오산역점", region: "오산역", pricePerPerson: 28000, voteCount: 3 },
+        { id: "cand-b", venueId: "b", name: "이자카야 온기 오산", region: "오산역", pricePerPerson: 29500, voteCount: 1 },
       ],
     });
     render(<VoteView voteId="vote-1" />);

@@ -21,7 +21,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { BookmarkIcon, Trash2Icon } from "lucide-react";
+import { BookmarkIcon, MapPinIcon, Trash2Icon } from "lucide-react";
+import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { SavedVenue } from "@/services/saved-venue-store";
 
 export interface SavedListProps {
@@ -112,8 +113,20 @@ export function SavedList({ items: initialItems }: SavedListProps) {
           <Card key={item.id}>
             <CardContent className="flex items-center justify-between">
               <div>
-                <div data-testid="saved-item-name" className="text-sm font-bold">
-                  {item.name}
+                <div className="flex items-center gap-1">
+                  <div data-testid="saved-item-name" className="text-sm font-bold">
+                    {item.name}
+                  </div>
+                  <Button variant="ghost" size="icon-xs" asChild>
+                    <a
+                      href={naverMapSearchUrl(item.name, item.region)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="네이버 지도에서 보기"
+                    >
+                      <MapPinIcon />
+                    </a>
+                  </Button>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
                   {item.category} · {item.region}

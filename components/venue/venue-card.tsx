@@ -1,8 +1,11 @@
 "use client";
 
+import { MapPinIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { Venue } from "@/types/recommendation";
 
 function formatCount(n: number): string {
@@ -29,7 +32,19 @@ export function VenueCard({ venue, withinBudget, checked, onCheckedChange }: Ven
         />
         <div className="flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-bold">{venue.name}</span>
+            <span className="flex items-center gap-1 text-sm font-bold">
+              {venue.name}
+              <Button variant="ghost" size="icon-xs" asChild>
+                <a
+                  href={naverMapSearchUrl(venue.name, venue.region)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="네이버 지도에서 보기"
+                >
+                  <MapPinIcon />
+                </a>
+              </Button>
+            </span>
             {withinBudget ? (
               <span className="text-xs text-muted-foreground">★ {venue.rating}</span>
             ) : (

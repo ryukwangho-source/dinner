@@ -51,6 +51,17 @@ describe("SavedList", () => {
     expect(screen.queryByText("호프집 강남불빛")).not.toBeInTheDocument();
   });
 
+  it("각 장소에 네이버 지도에서 보기 링크가 있다", () => {
+    render(<SavedList items={items} />);
+    const links = screen.getAllByRole("link", { name: "네이버 지도에서 보기" });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      `https://map.naver.com/p/search/${encodeURIComponent("강남역 호프집 강남불빛")}`,
+    );
+    expect(links[0]).toHaveAttribute("target", "_blank");
+  });
+
   it("모두 삭제 확인 → 목록이 0건이 되고 빈 상태 문구가 나타난다", async () => {
     const user = userEvent.setup();
     render(<SavedList items={items} />);

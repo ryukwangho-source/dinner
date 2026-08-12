@@ -54,6 +54,16 @@ describe("CreateVoteForm", () => {
     }
   });
 
+  it("각 후보에 네이버 지도에서 보기 링크가 있다", () => {
+    render(<CreateVoteForm candidates={candidates} />);
+    const links = screen.getAllByRole("link", { name: "네이버 지도에서 보기" });
+    expect(links).toHaveLength(3);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      `https://map.naver.com/p/search/${encodeURIComponent("오산역 숯불향 오산역점")}`,
+    );
+  });
+
   it("제한시간 선택 후 확정하면 POST /api/votes가 호출되고 공유 링크가 표시된다", async () => {
     const user = userEvent.setup();
     render(<CreateVoteForm candidates={candidates} />);

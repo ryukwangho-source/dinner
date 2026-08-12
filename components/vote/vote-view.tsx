@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { MapPinIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { getDeviceId } from "@/lib/device-id";
 import { formatRemaining } from "@/lib/format-remaining";
+import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { VoteDetail } from "@/types/vote";
 
 const POLL_INTERVAL_MS = 5000;
@@ -125,7 +127,19 @@ export function VoteView({ voteId }: VoteViewProps) {
                     aria-label={`${candidate.name} 선택`}
                   />
                 )}
-                <span className="flex-1 text-sm font-bold">{candidate.name}</span>
+                <span className="flex flex-1 items-center gap-1 text-sm font-bold">
+                  {candidate.name}
+                  <Button variant="ghost" size="icon-xs" asChild>
+                    <a
+                      href={naverMapSearchUrl(candidate.name, candidate.region)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="네이버 지도에서 보기"
+                    >
+                      <MapPinIcon />
+                    </a>
+                  </Button>
+                </span>
                 <span className="text-xs font-bold">{candidate.voteCount}표</span>
               </div>
               <Progress value={totalVotes > 0 ? (candidate.voteCount / totalVotes) * 100 : 0} />

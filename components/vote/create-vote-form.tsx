@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { MapPinIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { copyVoteLink, shareVoteLink } from "@/lib/venue-share";
+import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { Venue } from "@/types/recommendation";
 import type { VoteDuration } from "@/types/vote";
 
@@ -89,7 +91,19 @@ export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
           <div className="text-xs font-bold text-muted-foreground">후보</div>
           {candidates.map((venue) => (
             <div key={venue.id} className="flex items-center justify-between text-sm">
-              <span>{venue.name}</span>
+              <span className="flex items-center gap-1">
+                {venue.name}
+                <Button variant="ghost" size="icon-xs" asChild>
+                  <a
+                    href={naverMapSearchUrl(venue.name, venue.region)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="네이버 지도에서 보기"
+                  >
+                    <MapPinIcon />
+                  </a>
+                </Button>
+              </span>
               <span className="text-xs text-muted-foreground">
                 1인 {venue.pricePerPerson.toLocaleString("ko-KR")}원
               </span>

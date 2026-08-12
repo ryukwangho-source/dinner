@@ -43,4 +43,15 @@ describe("VenueCard", () => {
     await user.click(screen.getByRole("checkbox"));
     expect(onCheckedChange).toHaveBeenCalledWith(true);
   });
+
+  it("네이버 지도에서 보기 링크가 새 탭으로 이 장소를 검색한다", () => {
+    render(<VenueCard venue={venue} withinBudget checked={false} onCheckedChange={() => {}} />);
+    const link = screen.getByRole("link", { name: "네이버 지도에서 보기" });
+    expect(link).toHaveAttribute(
+      "href",
+      `https://map.naver.com/p/search/${encodeURIComponent("강남역 숯불향 강남점")}`,
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
 });

@@ -4,6 +4,7 @@ export interface VoteCandidate {
   id: string;
   venueId: string;
   name: string;
+  region: string;
   pricePerPerson: number;
 }
 

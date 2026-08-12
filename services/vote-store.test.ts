@@ -36,6 +36,7 @@ describe("voteStore", () => {
     expect(detail?.candidates[0]).toMatchObject({
       venueId: "osan-charcoal",
       name: "숯불향 오산역점",
+      region: "오산역",
       pricePerPerson: 28000,
     });
   });
