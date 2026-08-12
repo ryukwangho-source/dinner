@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { rankVenues } from "@/lib/venue-ranking";
-import { ResultList } from "@/components/venue/result-list";
+import { VenueResultsFlow } from "@/components/venue/venue-results-flow";
 import { REGIONS } from "@/config/venues";
 import { getVoteStore } from "@/services/vote-store";
 
@@ -25,15 +24,13 @@ export default async function ResultsPage({ searchParams }: Props) {
     redirect("/");
   }
 
-  const results = rankVenues(region, budgetPerPerson);
   const votes = getVoteStore().listAll();
 
   return (
-    <ResultList
+    <VenueResultsFlow
       region={region}
       partySize={partySize}
       budgetPerPerson={budgetPerPerson}
-      results={results}
       votes={votes}
     />
   );
