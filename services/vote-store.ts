@@ -144,7 +144,20 @@ export function createVoteStore(dbPath: string) {
       if (!vote) return "not-found";
       if (isClosed(vote.deadline_at, now)) return "closed";
 
-      upsertSubmission.run(voteId, deviceId, JSON.stringify(selectedCandidateIds), now.toISOString());
+      // 중복 id·이 투표에 속하지 않는 id는 걸러낸다 — 그렇지 않으면 같은 후보를 여러 번
+      // 보내 득표수를 부풀릴 수 있다 (한 기기의 한 번 제출은 후보당 최대 1표여야 한다).
+      const validCandidateIds = new Set(
+        (
+          db
+            .prepare("SELECT id FROM vote_candidates WHERE vote_id = ?")
+            .all(voteId) as { id: string }[]
+        ).map((row) => row.id),
+      );
+      const sanitized = Array.from(new Set(selectedCandidateIds)).filter((candidateId) =>
+        validCandidateIds.has(candidateId),
+      );
+
+      upsertSubmission.run(voteId, deviceId, JSON.stringify(sanitized), now.toISOString());
       return "ok";
     },
 

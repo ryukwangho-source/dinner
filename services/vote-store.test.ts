@@ -76,6 +76,29 @@ describe("voteStore", () => {
     expect(tally).toEqual({ a: 2, b: 2 });
   });
 
+  it("같은 후보 id를 중복 제출해도 그 기기의 표는 후보당 1표로만 반영된다", () => {
+    const a = makeVenue("a", "A", 20000);
+    const { id } = store.create([a], "1h", NOW);
+    const candA = store.get(id, "device-1", NOW)!.candidates[0].id;
+
+    store.submitBallot(id, "device-1", [candA, candA, candA], NOW);
+
+    const detail = store.get(id, "device-1", NOW)!;
+    expect(detail.candidates[0].voteCount).toBe(1);
+  });
+
+  it("이 투표에 속하지 않는 candidateId는 무시하고 유효한 것만 반영한다", () => {
+    const a = makeVenue("a", "A", 20000);
+    const { id } = store.create([a], "1h", NOW);
+    const candA = store.get(id, "device-1", NOW)!.candidates[0].id;
+
+    store.submitBallot(id, "device-1", [candA, "no-such-candidate-id"], NOW);
+
+    const detail = store.get(id, "device-1", NOW)!;
+    expect(detail.candidates[0].voteCount).toBe(1);
+    expect(detail.mySelection).toEqual([candA]);
+  });
+
   it("마감 시각이 지난 투표에 제출을 시도하면 거부된다", () => {
     const a = makeVenue("a", "A", 20000);
     const { id } = store.create([a], "30m", NOW);

@@ -37,6 +37,8 @@ export function VoteView({ voteId }: VoteViewProps) {
   }, [voteId]);
 
   useEffect(() => {
+    // 초기 로드 + 5초 폴링 — 외부 API(투표 서버)를 구독하는 패턴이라 setState가 불가피하다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDetail();
     const interval = setInterval(fetchDetail, POLL_INTERVAL_MS);
     return () => clearInterval(interval);

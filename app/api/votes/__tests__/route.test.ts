@@ -48,6 +48,16 @@ describe("/api/votes", () => {
     expect(res.status).toBe(400);
   });
 
+  it("일부만 존재하지 않는 venueId면 조용히 일부만 생성하지 않고 400", async () => {
+    const res = await createVote(
+      jsonRequest({ venueIds: ["osan-charcoal", "no-such-venue"], duration: "1h" }),
+    );
+    expect(res.status).toBe(400);
+
+    const listRes = await listVotes();
+    expect(await listRes.json()).toHaveLength(0);
+  });
+
   it("유효하지 않은 duration → 400", async () => {
     const res = await createVote(jsonRequest({ venueIds: ["osan-charcoal"], duration: "5d" }));
     expect(res.status).toBe(400);

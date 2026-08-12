@@ -185,14 +185,21 @@ describe("VoteView", () => {
     expect(await screen.findByText("투표를 찾을 수 없어요")).toBeInTheDocument();
   });
 
-  it("5초 경과마다 상세 조회를 다시 호출한다 (실시간 갱신 폴링)", async () => {
-    mockServer();
+  it("5초 경과마다 상세 조회를 다시 호출해 다른 기기의 제출을 화면에 반영한다 (실시간 갱신 폴링)", async () => {
+    const state = mockServer();
     render(<VoteView voteId="vote-1" />);
 
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    expect(await screen.findAllByText("0표")).toHaveLength(2);
+
+    // 폴링 사이 다른 기기가 제출했다고 가정 — 서버 상태를 직접 바꿔 다음 poll이 이를 읽어오는지 확인
+    state.detail = {
+      ...state.detail!,
+      candidates: state.detail!.candidates.map((c) =>
+        c.venueId === "a" ? { ...c, voteCount: 1 } : c,
+      ),
+    };
+
     await vi.advanceTimersByTimeAsync(5000);
-    expect(fetch).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(await screen.findByText("1표")).toBeInTheDocument();
   });
 });

@@ -4,8 +4,9 @@ import { getVoteStore } from "@/services/vote-store";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const ballotBodySchema = z.object({
-  deviceId: z.string().min(1),
-  selectedCandidateIds: z.array(z.string()).min(1),
+  deviceId: z.string().min(1).max(200),
+  // 투표 후보는 결과 화면 5곳 중 일부라 20이면 넉넉하다 — 무제한 배열로 저장 공간을 낭비하지 않는다
+  selectedCandidateIds: z.array(z.string()).min(1).max(20),
 });
 
 export async function POST(request: Request, context: RouteContext) {
