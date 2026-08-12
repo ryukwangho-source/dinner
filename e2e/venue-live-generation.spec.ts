@@ -27,4 +27,10 @@ test("추천받기(GENERATE_FIXTURE) → 로딩 → 결과 5곳(회식 업종) �
 
   await page.goto("/saved");
   await expect(page.getByTestId("saved-item-name")).toHaveCount(2);
+
+  // 저장 목록은 다른 e2e 파일과 공유되는 상태라 여기서 남긴 항목을 정리한다
+  // (venue-recommendation.spec.ts 등 다른 파일의 "정확히 N개" 검증이 깨지지 않도록).
+  await page.getByRole("button", { name: "모두 삭제" }).click();
+  await page.getByRole("button", { name: "모두 삭제하기" }).click();
+  await expect(page.getByText("저장된 장소가 없어요")).toBeVisible();
 });
