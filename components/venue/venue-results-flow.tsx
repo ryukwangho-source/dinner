@@ -70,7 +70,6 @@ export function VenueResultsFlow({ region, partySize, budgetPerPerson, votes }: 
 
   useEffect(() => {
     // 진입 시 생성 시작 — 서버가 캐시·진행 중 작업을 우선 재사용하므로 재진입해도 중복 생성되지 않는다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     start();
     return stopPolling;
   }, [start, stopPolling]);
