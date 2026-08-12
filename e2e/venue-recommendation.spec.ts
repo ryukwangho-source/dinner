@@ -5,7 +5,7 @@ test("입력 오류→재제출→추천→선택 저장→저장 목록 확인�
 
   // 미완성 입력 → 입력해주세요 안내, 화면 전환 없음
   await page.getByRole("combobox").click();
-  await page.getByRole("option", { name: "강남역" }).click();
+  await page.getByRole("option", { name: "오산역" }).click();
   await page.getByRole("button", { name: "추천받기" }).click();
   await expect(page.getByText("입력해주세요").first()).toBeVisible();
   await expect(page).toHaveURL("/");

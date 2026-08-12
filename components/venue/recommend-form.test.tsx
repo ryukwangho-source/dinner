@@ -19,7 +19,7 @@ describe("RecommendForm", () => {
     render(<RecommendForm />);
 
     await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "강남역" }));
+    await user.click(await screen.findByRole("option", { name: "오산역" }));
     await user.click(screen.getByRole("button", { name: "추천받기" }));
 
     expect(await screen.findAllByText("입력해주세요")).toHaveLength(2);
@@ -31,13 +31,13 @@ describe("RecommendForm", () => {
     render(<RecommendForm />);
 
     await user.click(screen.getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "강남역" }));
+    await user.click(await screen.findByRole("option", { name: "오산역" }));
     await user.type(screen.getByLabelText("인원수"), "8");
     await user.type(screen.getByLabelText("인원당 가용예산"), "30000");
     await user.click(screen.getByRole("button", { name: "추천받기" }));
 
     expect(pushMock).toHaveBeenCalledWith(
-      "/results?region=%EA%B0%95%EB%82%A8%EC%97%AD&people=8&budget=30000",
+      `/results?region=${encodeURIComponent("오산역")}&people=8&budget=30000`,
     );
   });
 
