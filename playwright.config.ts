@@ -28,6 +28,9 @@ export default defineConfig({
       // 실사용 DB와 분리
       SAVED_VENUES_DB_PATH: "data/saved-venues-e2e.db",
       VOTES_DB_PATH: "data/votes-e2e.db",
+      VENUE_JOBS_DB_PATH: "data/venue-jobs-e2e.db",
+      // 실 웹검색 없이 결정적 fixture로 생성 — 비용·시간·비결정성 회피
+      GENERATE_FIXTURE: "1",
     },
   },
 });
