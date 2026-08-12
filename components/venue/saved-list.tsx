@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,18 +30,38 @@ export interface SavedListProps {
 
 export function SavedList({ items: initialItems }: SavedListProps) {
   const [items, setItems] = useState(initialItems);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   async function handleDelete(id: string) {
-    const res = await fetch(`/api/saved/${id}`, { method: "DELETE" });
-    if (res.ok) {
+    if (pendingIds.has(id)) return;
+    setPendingIds((prev) => new Set(prev).add(id));
+    try {
+      const res = await fetch(`/api/saved/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("delete failed");
       setItems((prev) => prev.filter((item) => item.id !== id));
+    } catch {
+      toast.error("삭제에 실패했어요");
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }
 
   async function handleDeleteAll() {
-    const res = await fetch("/api/saved", { method: "DELETE" });
-    if (res.ok) {
+    if (isDeletingAll) return;
+    setIsDeletingAll(true);
+    try {
+      const res = await fetch("/api/saved", { method: "DELETE" });
+      if (!res.ok) throw new Error("delete all failed");
       setItems([]);
+    } catch {
+      toast.error("삭제에 실패했어요");
+    } finally {
+      setIsDeletingAll(false);
     }
   }
 
@@ -78,7 +99,9 @@ export function SavedList({ items: initialItems }: SavedListProps) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>취소</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteAll}>모두 삭제하기</AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteAll} disabled={isDeletingAll}>
+                모두 삭제하기
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -100,6 +123,7 @@ export function SavedList({ items: initialItems }: SavedListProps) {
                 variant="outline"
                 size="icon-sm"
                 aria-label="삭제"
+                disabled={pendingIds.has(item.id)}
                 onClick={() => handleDelete(item.id)}
               >
                 <Trash2Icon />

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { rankVenues } from "@/lib/venue-ranking";
 import { ResultList } from "@/components/venue/result-list";
+import { REGIONS } from "@/config/venues";
 
 type Props = {
   searchParams: Promise<{ region?: string; people?: string; budget?: string }>;
@@ -13,6 +14,7 @@ export default async function ResultsPage({ searchParams }: Props) {
 
   const isValid =
     !!region &&
+    REGIONS.includes(region) &&
     Number.isInteger(partySize) &&
     partySize > 0 &&
     Number.isFinite(budgetPerPerson) &&

@@ -17,6 +17,7 @@ export interface ResultListProps {
 
 export function ResultList({ region, partySize, budgetPerPerson, results }: ResultListProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
   const noneWithinBudget = results.length > 0 && results.every((r) => !r.withinBudget);
 
   function toggle(id: string, checked: boolean) {
@@ -29,6 +30,8 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
   }
 
   async function handleSave() {
+    if (isSaving) return;
+    setIsSaving(true);
     const venueIds = Array.from(selected);
     try {
       const res = await fetch("/api/saved", {
@@ -37,9 +40,12 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
         body: JSON.stringify({ venueIds }),
       });
       if (!res.ok) throw new Error("save failed");
-      toast.success(`${venueIds.length}곳을 저장했어요`);
+      const saved = (await res.json()) as unknown[];
+      toast.success(`${saved.length}곳을 저장했어요`);
     } catch {
       toast.error("저장에 실패했어요");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -79,7 +85,11 @@ export function ResultList({ region, partySize, budgetPerPerson, results }: Resu
         <span className="self-center text-xs text-muted-foreground @md:mr-auto">
           {selected.size}곳 선택됨
         </span>
-        <Button variant="outline" disabled={selected.size === 0} onClick={handleSave}>
+        <Button
+          variant="outline"
+          disabled={selected.size === 0 || isSaving}
+          onClick={handleSave}
+        >
           선택 저장
         </Button>
         <Button variant="outline" onClick={handleShare}>
