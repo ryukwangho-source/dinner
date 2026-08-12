@@ -1,4 +1,4 @@
-export type VoteDuration = "30m" | "1h" | "3h" | "tomorrow";
+export type VoteDuration = "30m" | "1h" | "3h" | "tomorrow" | "custom";
 
 export interface VoteCandidate {
   id: string;

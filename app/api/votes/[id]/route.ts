@@ -12,3 +12,12 @@ export async function GET(request: Request, context: RouteContext) {
   }
   return Response.json(detail);
 }
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  const removed = getVoteStore().remove(id);
+  if (!removed) {
+    return Response.json({ error: "투표를 찾을 수 없습니다" }, { status: 404 });
+  }
+  return Response.json({ ok: true });
+}

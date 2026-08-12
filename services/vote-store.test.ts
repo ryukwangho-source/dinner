@@ -121,6 +121,27 @@ describe("voteStore", () => {
     expect(store.get("no-such-id", "device-1", NOW)).toBeNull();
   });
 
+  it("duration이 custom이면 customMinutes만큼 뒤가 마감 시각이 된다", () => {
+    const a = makeVenue("a", "A", 20000);
+    const { deadlineAt } = store.create([a], "custom", NOW, 90);
+    expect(deadlineAt).toBe(new Date(NOW.getTime() + 90 * 60 * 1000).toISOString());
+  });
+
+  it("투표를 삭제하면 상세 조회·목록에서 모두 사라진다", () => {
+    const a = makeVenue("a", "A", 20000);
+    const { id } = store.create([a], "1h", NOW);
+    store.submitBallot(id, "device-1", [store.get(id, "device-1", NOW)!.candidates[0].id], NOW);
+
+    expect(store.remove(id)).toBe(true);
+
+    expect(store.get(id, "device-1", NOW)).toBeNull();
+    expect(store.listAll(NOW).find((v) => v.id === id)).toBeUndefined();
+  });
+
+  it("존재하지 않는 투표를 삭제하면 false를 반환한다", () => {
+    expect(store.remove("no-such-id")).toBe(false);
+  });
+
   it("전체 투표 목록은 생성 시각 역순으로 정렬되고 상태(open/closed)가 계산된다", () => {
     const a = makeVenue("a", "A", 20000);
     const first = store.create([a], "30m", NOW);

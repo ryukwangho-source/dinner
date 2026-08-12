@@ -60,7 +60,7 @@ describe("CreateVoteForm", () => {
     expect(links).toHaveLength(3);
     expect(links[0]).toHaveAttribute(
       "href",
-      `https://map.naver.com/p/search/${encodeURIComponent("오산역 숯불향 오산역점")}`,
+      `https://map.naver.com/p/search/${encodeURIComponent("숯불향 오산역점")}`,
     );
   });
 
@@ -79,6 +79,35 @@ describe("CreateVoteForm", () => {
       }),
     );
     expect(await screen.findByText("http://localhost:3110/vote/vote-1")).toBeInTheDocument();
+  });
+
+  it("직접 입력 선택 → 분 입력란이 나타나고, 값을 채워 확정하면 customMinutes와 함께 요청된다", async () => {
+    const user = userEvent.setup();
+    render(<CreateVoteForm candidates={candidates} />);
+
+    await user.click(screen.getByRole("radio", { name: "직접 입력" }));
+    const minutesInput = screen.getByRole("spinbutton", { name: "제한시간 직접 입력(분)" });
+    await user.type(minutesInput, "90");
+    await user.click(screen.getByRole("button", { name: "투표 만들기 확정" }));
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/votes",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ venueIds: ["a", "b", "c"], duration: "custom", customMinutes: 90 }),
+      }),
+    );
+    expect(await screen.findByText("http://localhost:3110/vote/vote-1")).toBeInTheDocument();
+  });
+
+  it("직접 입력을 고르고 분을 비워둔 채 확정하면 요청을 보내지 않는다", async () => {
+    const user = userEvent.setup();
+    render(<CreateVoteForm candidates={candidates} />);
+
+    await user.click(screen.getByRole("radio", { name: "직접 입력" }));
+    await user.click(screen.getByRole("button", { name: "투표 만들기 확정" }));
+
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("발급 완료 후 링크 복사 클릭 → copyVoteLink가 URL로 호출된다", async () => {

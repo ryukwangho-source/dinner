@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { getDeviceId } from "@/lib/device-id";
-import { formatRemaining } from "@/lib/format-remaining";
+import { formatDeadline, formatRemaining } from "@/lib/format-remaining";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { VoteDetail } from "@/types/vote";
 
@@ -108,6 +108,9 @@ export function VoteView({ voteId }: VoteViewProps) {
         <div className="mt-1 text-xs text-muted-foreground">
           {detail.isClosed ? "투표가 마감되었어요" : formatRemaining(detail.deadlineAt, now)}
         </div>
+        {!detail.isClosed && (
+          <div className="text-xs text-muted-foreground">{formatDeadline(detail.deadlineAt)}</div>
+        )}
         {!detail.isClosed && alreadyVoted && (
           <div className="mt-2 text-xs text-muted-foreground">
             이미 투표했어요 · 마감 전까지 바꿀 수 있어요

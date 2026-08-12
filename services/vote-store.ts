@@ -76,16 +76,29 @@ export function createVoteStore(dbPath: string) {
       selected_candidate_ids = excluded.selected_candidate_ids,
       submitted_at = excluded.submitted_at
   `);
+  const deleteVote = db.prepare("DELETE FROM votes WHERE id = ?");
+  const deleteCandidatesByVote = db.prepare("DELETE FROM vote_candidates WHERE vote_id = ?");
+  const deleteSubmissionsByVote = db.prepare("DELETE FROM vote_submissions WHERE vote_id = ?");
+  const removeTx = db.transaction((voteId: string) => {
+    deleteSubmissionsByVote.run(voteId);
+    deleteCandidatesByVote.run(voteId);
+    return deleteVote.run(voteId).changes > 0;
+  });
 
   function isClosed(deadlineAt: string, now: Date): boolean {
     return new Date(deadlineAt).getTime() <= now.getTime();
   }
 
   return {
-    create(candidates: Venue[], duration: VoteDuration, now = new Date()): { id: string; deadlineAt: string } {
+    create(
+      candidates: Venue[],
+      duration: VoteDuration,
+      now = new Date(),
+      customMinutes?: number,
+    ): { id: string; deadlineAt: string } {
       const id = randomUUID();
       const createdAt = now.toISOString();
-      const deadlineAt = computeDeadline(duration, now).toISOString();
+      const deadlineAt = computeDeadline(duration, now, customMinutes).toISOString();
       const tx = db.transaction(() => {
         insertVote.run(id, deadlineAt, createdAt);
         for (const venue of candidates) {
@@ -169,6 +182,11 @@ export function createVoteStore(dbPath: string) {
 
       upsertSubmission.run(voteId, deviceId, JSON.stringify(sanitized), now.toISOString());
       return "ok";
+    },
+
+    /** 투표와 그 후보·제출 기록을 함께 삭제한다. 존재하지 않으면 false. */
+    remove(voteId: string): boolean {
+      return removeTx(voteId);
     },
 
     listAll(now = new Date()): VoteSummary[] {

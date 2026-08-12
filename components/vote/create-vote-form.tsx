@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { MapPinIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { copyVoteLink, shareVoteLink } from "@/lib/venue-share";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
@@ -17,6 +18,7 @@ const DURATION_OPTIONS: { value: VoteDuration; label: string }[] = [
   { value: "1h", label: "1시간" },
   { value: "3h", label: "3시간" },
   { value: "tomorrow", label: "내일까지" },
+  { value: "custom", label: "직접 입력" },
 ];
 
 export interface CreateVoteFormProps {
@@ -26,17 +28,27 @@ export interface CreateVoteFormProps {
 export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
   const router = useRouter();
   const [duration, setDuration] = useState<VoteDuration>("1h");
+  const [customMinutes, setCustomMinutes] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   async function handleConfirm() {
     if (isCreating) return;
+    const parsedCustomMinutes = Number(customMinutes);
+    if (duration === "custom" && (!Number.isInteger(parsedCustomMinutes) || parsedCustomMinutes <= 0)) {
+      toast.error("제한시간을 입력해주세요");
+      return;
+    }
     setIsCreating(true);
     try {
       const res = await fetch("/api/votes", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ venueIds: candidates.map((c) => c.id), duration }),
+        body: JSON.stringify({
+          venueIds: candidates.map((c) => c.id),
+          duration,
+          ...(duration === "custom" ? { customMinutes: parsedCustomMinutes } : {}),
+        }),
       });
       if (!res.ok) throw new Error("create vote failed");
       const vote = (await res.json()) as { id: string };
@@ -120,7 +132,7 @@ export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
             value={duration}
             onValueChange={(value) => value && setDuration(value as VoteDuration)}
             variant="outline"
-            className="grid w-full grid-cols-2"
+            className="grid w-full grid-cols-3"
           >
             {DURATION_OPTIONS.map((opt) => (
               <ToggleGroupItem key={opt.value} value={opt.value} aria-label={opt.label}>
@@ -128,6 +140,20 @@ export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+          {duration === "custom" && (
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                placeholder="분 단위로 입력"
+                value={customMinutes}
+                onChange={(e) => setCustomMinutes(e.target.value)}
+                aria-label="제한시간 직접 입력(분)"
+              />
+              <span className="text-xs text-muted-foreground">분</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 

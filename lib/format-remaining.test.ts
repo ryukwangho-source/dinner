@@ -1,25 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatRemaining } from "@/lib/format-remaining";
+import { formatDeadline } from "@/lib/format-remaining";
 
-const NOW = new Date("2026-08-12T14:00:00.000Z");
-
-describe("formatRemaining", () => {
-  it("42분 남았으면 42분 남음", () => {
-    const deadline = new Date(NOW.getTime() + 42 * 60 * 1000).toISOString();
-    expect(formatRemaining(deadline, NOW)).toBe("42분 남음");
+describe("formatDeadline", () => {
+  it("마감 절대 시각을 '월 일 시:분 마감' 형식으로 반환한다", () => {
+    const local = new Date(2026, 7, 13, 21, 0, 0);
+    expect(formatDeadline(local.toISOString())).toBe("8월 13일 21:00 마감");
   });
 
-  it("1시간 24분 남았으면 1시간 24분 남음", () => {
-    const deadline = new Date(NOW.getTime() + (60 + 24) * 60 * 1000).toISOString();
-    expect(formatRemaining(deadline, NOW)).toBe("1시간 24분 남음");
-  });
-
-  it("마감 시각이 지났으면 마감", () => {
-    const deadline = new Date(NOW.getTime() - 1000).toISOString();
-    expect(formatRemaining(deadline, NOW)).toBe("마감");
-  });
-
-  it("마감 시각과 정확히 같으면 마감", () => {
-    expect(formatRemaining(NOW.toISOString(), NOW)).toBe("마감");
+  it("한 자리 시·분도 두 자리로 0을 채운다", () => {
+    const local = new Date(2026, 0, 5, 9, 5, 0);
+    expect(formatDeadline(local.toISOString())).toBe("1월 5일 09:05 마감");
   });
 });

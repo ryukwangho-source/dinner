@@ -74,6 +74,18 @@ describe("VoteView", () => {
     expect(screen.getAllByText("0표")).toHaveLength(2);
   });
 
+  it("마감 전에는 남은 시간과 함께 마감 절대 시각도 표시된다", async () => {
+    const detail = {
+      ...baseDetail(),
+      deadlineAt: new Date(2026, 7, 13, 21, 0, 0).toISOString(),
+    };
+    mockServer(detail);
+    render(<VoteView voteId="vote-1" />);
+    await screen.findByText("숯불향 오산역점");
+
+    expect(screen.getByText("8월 13일 21:00 마감")).toBeInTheDocument();
+  });
+
   it("후보 2곳 체크 후 투표하기 클릭 → 그 2곳의 득표수가 반영된다", async () => {
     mockServer();
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
