@@ -27,6 +27,7 @@ export default defineConfig({
     env: {
       // 실사용 DB와 분리
       SAVED_VENUES_DB_PATH: "data/saved-venues-e2e.db",
+      VOTES_DB_PATH: "data/votes-e2e.db",
     },
   },
 });
