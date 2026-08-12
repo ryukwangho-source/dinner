@@ -21,6 +21,9 @@ Ideate → Define → Sketch → Plan → Build → Compound
 ### 커밋 규칙
 - Conventional 규칙을 따르고, feature 단위로 커밋한다.
 
+### 계획 작성 시 주의
+- `/draft-plan`에서 아키텍처 결정을 확정하기 전에, 필요 스킬(특히 shadcn)의 Critical Rules를 먼저 읽는다 — 나중에 뒤집고 plan.md를 고치는 일을 반복하지 않기 위함 (예: "토스트 라이브러리 없이 인라인 배너"로 정했다가 shadcn의 "Toast via sonner" 규칙 때문에 구현 중 번복한 사례).
+
 ## Testing
 
 ### 원칙
