@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import {
   ALLOWED_CATEGORIES,
@@ -7,9 +9,12 @@ import {
   RATING_MIN,
   RELAXED_REVIEW_MIN,
   REVIEW_MIN,
+  WEB_SEARCH_MAX_USES,
 } from "@/config/venue-generation";
+import { getAnthropic } from "@/lib/anthropic";
 import { rankVenueCandidates } from "@/lib/venue-ranking";
 import { venueGenerationFixture } from "@/services/fixtures/venue-generation-fixture";
+import type { GenerationUsage } from "@/types/generation-usage";
 import type { RankedVenue, Venue } from "@/types/recommendation";
 
 const TOP_N = 5;
@@ -33,7 +38,8 @@ function researchPrompt(region: string, partySize: number): string {
 - 지역: ${region}
 - 인원: ${partySize}명
 - 업종: 반드시 다음 중 하나여야 한다 — ${ALLOWED_CATEGORIES.join("·")}. 카페·디저트카페·편의점 등 회식과 무관한 곳은 제외한다.
-- 조사 대상: ${CANDIDATE_COUNT}곳
+- 조사 대상(비용 절감을 위해 딱 필요한 만큼만): ${CANDIDATE_COUNT}곳. 그 이상은 조사하지 않는다.
+- 검색은 필요한 만큼만 — 같은 정보를 여러 번 다시 찾지 말고, 한 번에 여러 후보를 확인할 수 있으면 한 번에 확인하라.
 
 각 장소마다 조사할 것:
 1. 정확한 이름
@@ -41,14 +47,10 @@ function researchPrompt(region: string, partySize: number): string {
 3. 평점(5점 만점 환산)과 리뷰 수 — 실제 검색·페이지 확인 수치를 우선한다(500·1000 같은 임의 반올림 금지). 정확한 값을 못 찾으면 신뢰할 만한 근사치라도 채운다
 4. 1인 예상 비용(원화, 식사+음주 포함 대략치)
 
-우선순위: 평점 ${RATING_MIN} 이상, 리뷰 ${REVIEW_MIN}개 이상인 곳 위주로 조사하되, 부족하면 리뷰 ${RELAXED_REVIEW_MIN}개 이상까지 포함해도 좋다.
-
-조사를 마치면 아래 JSON 형식 하나만 담은 코드 블록으로 답하라. 다른 설명은 덧붙이지 않는다:
-\`\`\`json
-{ "venues": [ { "name": "...", "category": "...", "rating": 0, "reviewCount": 0, "pricePerPerson": 0 } ] }
-\`\`\`
-새 장소를 지어내지 않는다 — 조사 결과에 있는 장소만 담는다.`;
+우선순위: 평점 ${RATING_MIN} 이상, 리뷰 ${REVIEW_MIN}개 이상인 곳 위주로 조사하되, 부족하면 리뷰 ${RELAXED_REVIEW_MIN}개 이상까지 포함해도 좋다.`;
 }
+
+const META_JSON_SHAPE = `{ "venues": [ { "name": string, "category": string, "rating": number, "reviewCount": number, "pricePerPerson": number } ] }`;
 
 /** 흔한 LLM JSON 오류(트레일링 콤마·// 주석)를 관대하게 정리 */
 function looseJsonClean(s: string): string {
@@ -105,16 +107,69 @@ export function toVenues(raw: GeneratedVenue[], region: string): Venue[] {
     }));
 }
 
-async function runAgentGeneration(region: string, partySize: number): Promise<string> {
+// ── 직접 API 경로 (ANTHROPIC_API_KEY 있을 때 — web_search tool로 검색 횟수 상한 강제) ──
+
+async function runResearch(client: Anthropic, region: string, partySize: number): Promise<string> {
+  const messages: Anthropic.MessageParam[] = [
+    { role: "user", content: `${researchPrompt(region, partySize)}\n\n검색을 마치면 조사한 장소를 정리해 출력하라.` },
+  ];
+  let research = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const stream = client.messages.stream({
+      model: GENERATION_MODEL,
+      max_tokens: 16000,
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium" },
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES }],
+      messages,
+    });
+    const message = await stream.finalMessage();
+    research += message.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n");
+    if (message.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: message.content });
+  }
+  if (!research.trim()) throw new Error("회식 장소 조사에 실패했습니다");
+  return research;
+}
+
+async function extractVenues(client: Anthropic, research: string): Promise<GeneratedVenue[]> {
+  const response = await client.messages.parse({
+    model: GENERATION_MODEL,
+    max_tokens: 8000,
+    messages: [{ role: "user", content: `다음은 회식 장소 조사 결과다. 스키마에 맞게 정규화하라.\n\n${research}` }],
+    output_config: { format: zodOutputFormat(generatedVenuesSchema), effort: "low" },
+  });
+  if (!response.parsed_output) throw new Error("조사 결과 정규화에 실패했습니다");
+  return response.parsed_output.venues;
+}
+
+// ── Agent SDK 경로 (ANTHROPIC_API_KEY 없을 때 — 구독 인증 폴백) ──
+
+async function runAgentGeneration(
+  region: string,
+  partySize: number,
+): Promise<{ venues: GeneratedVenue[]; usage: GenerationUsage | null }> {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
-  const prompt = researchPrompt(region, partySize);
+  const prompt = `${researchPrompt(region, partySize)}
+
+**절대 규칙 — 반드시 JSON으로 끝낸다**:
+- 마지막 답변은 아래 스키마에 맞는 JSON 하나만 담은 \`\`\`json 코드 블록 하나로 끝내라. 그 외 설명·중간 요약·산문 나열은 하지 말라.
+- 권한(WebFetch 등) 요청, 되묻기, "조사를 중단하겠습니다" 같은 보고성 응답은 절대 금지. 필요하면 WebSearch·WebFetch를 직접 써서 확인하라.
+- 일부 평점·리뷰 수가 불확실해도 절대 멈추지 말라. 확인한 수치를 우선 쓰되, 못 찾은 값은 신뢰할 만한 근사치로 채워 무조건 JSON을 완성한다. 완벽하지 않아도 된다.
+
+스키마:
+${META_JSON_SHAPE}`;
 
   let resultText = "";
+  let usage: GenerationUsage | null = null;
   for await (const message of query({
     prompt,
     options: {
       allowedTools: ["WebSearch", "WebFetch"],
-      maxTurns: 20,
+      maxTurns: 40,
       model: GENERATION_MODEL,
     },
   })) {
@@ -123,25 +178,53 @@ async function runAgentGeneration(region: string, partySize: number): Promise<st
         throw new Error(`장소 생성 실패: ${message.subtype}`);
       }
       resultText = message.result;
+      const u = message.usage;
+      const cost = message.total_cost_usd;
+      const models = Object.keys(message.modelUsage ?? {});
+      console.log(
+        `[venue-generation] usage — model:${models.join(",") || "?"} input:${u.input_tokens} output:${u.output_tokens} cacheRead:${u.cache_read_input_tokens} cacheWrite:${u.cache_creation_input_tokens} cost:$${cost.toFixed(4)}`,
+      );
+      usage = {
+        inputTokens: u.input_tokens,
+        outputTokens: u.output_tokens,
+        cacheReadTokens: u.cache_read_input_tokens,
+        cacheWriteTokens: u.cache_creation_input_tokens,
+        costUsd: cost,
+        models,
+      };
     }
   }
   if (!resultText.trim()) throw new Error("회식 장소 조사에 실패했습니다");
-  return resultText;
+  return { venues: parseVenuesFromText(resultText), usage };
 }
 
 /**
  * 지역·인원수·예산으로 회식 장소를 실시간 생성해 상위 5곳을 반환한다.
- * GENERATE_FIXTURE=1이면 실제 웹검색 없이 고정 fixture를 쓴다(테스트·E2E 전용, 수 분·토큰 비용 회피).
+ * ANTHROPIC_API_KEY가 있으면 직접 API(web_search tool, 검색 횟수 상한 강제 + 구조화 출력),
+ * 없으면 Agent SDK(구독 인증) 경로를 쓴다.
+ * GENERATE_FIXTURE=1이면 실제 웹검색 없이 고정 fixture를 쓴다(테스트·E2E 전용, 비용 회피).
  */
 export async function generateVenues(
   region: string,
   partySize: number,
   budgetPerPerson: number,
-): Promise<RankedVenue[]> {
-  const candidates =
-    process.env.GENERATE_FIXTURE === "1"
-      ? venueGenerationFixture(region)
-      : toVenues(parseVenuesFromText(await runAgentGeneration(region, partySize)), region);
+  client?: Anthropic,
+): Promise<{ results: RankedVenue[]; usage: GenerationUsage | null }> {
+  let candidates: Venue[];
+  let usage: GenerationUsage | null = null;
 
-  return rankVenueCandidates(candidates, budgetPerPerson).slice(0, TOP_N);
+  if (process.env.GENERATE_FIXTURE === "1") {
+    candidates = venueGenerationFixture(region);
+  } else if (!client && !process.env.ANTHROPIC_API_KEY) {
+    const agentResult = await runAgentGeneration(region, partySize);
+    candidates = toVenues(agentResult.venues, region);
+    usage = agentResult.usage;
+  } else {
+    const api = client ?? getAnthropic();
+    const research = await runResearch(api, region, partySize);
+    const venues = await extractVenues(api, research);
+    candidates = toVenues(venues, region);
+  }
+
+  return { results: rankVenueCandidates(candidates, budgetPerPerson).slice(0, TOP_N), usage };
 }

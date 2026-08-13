@@ -27,8 +27,8 @@ export function startGeneration(
   void (async () => {
     store.markRunning(job.id);
     try {
-      const result = await generateVenues(region, partySize, budgetPerPerson);
-      store.markDone(job.id, result);
+      const { results, usage } = await generateVenues(region, partySize, budgetPerPerson);
+      store.markDone(job.id, results, usage);
     } catch (error) {
       console.error("[venue-generation] 실패:", error);
       store.markError(job.id, error instanceof Error ? error.message : "추천 생성에 실패했습니다");

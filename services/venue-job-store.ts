@@ -3,6 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { CACHE_TTL_MS } from "@/config/venue-generation";
+import type { GenerationUsage } from "@/types/generation-usage";
 import type { RankedVenue } from "@/types/recommendation";
 
 export type VenueJobStatus = "pending" | "running" | "done" | "error";
@@ -15,6 +16,7 @@ export interface VenueGenerationJob {
   budgetPerPerson: number;
   result: RankedVenue[] | null;
   error: string | null;
+  usage: GenerationUsage | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +29,7 @@ interface VenueJobRow {
   budget_per_person: number;
   result: string | null;
   error: string | null;
+  usage: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +43,7 @@ function rowToJob(row: VenueJobRow): VenueGenerationJob {
     budgetPerPerson: row.budget_per_person,
     result: row.result ? (JSON.parse(row.result) as RankedVenue[]) : null,
     error: row.error,
+    usage: row.usage ? (JSON.parse(row.usage) as GenerationUsage) : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -65,10 +69,19 @@ export function createVenueJobStore(dbPath: string) {
       budget_per_person INTEGER NOT NULL,
       result TEXT,
       error TEXT,
+      usage TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
   `);
+  // 기존 DB에는 usage 컬럼이 없을 수 있다 — CREATE TABLE IF NOT EXISTS는 이미
+  // 있는 테이블에 컬럼을 추가하지 않으므로 직접 확인 후 붙인다.
+  const hasUsageColumn = (
+    db.prepare("PRAGMA table_info(venue_jobs)").all() as { name: string }[]
+  ).some((c) => c.name === "usage");
+  if (!hasUsageColumn) {
+    db.exec("ALTER TABLE venue_jobs ADD COLUMN usage TEXT");
+  }
 
   const findByKeyStmt = db.prepare(
     "SELECT * FROM venue_jobs WHERE region = ? AND party_size = ? AND budget_per_person = ? AND status = ? ORDER BY created_at DESC LIMIT 1",
@@ -90,7 +103,7 @@ export function createVenueJobStore(dbPath: string) {
       const id = randomUUID();
       const now = new Date().toISOString();
       db.prepare(
-        "INSERT INTO venue_jobs (id, status, region, party_size, budget_per_person, result, error, created_at, updated_at) VALUES (?, 'pending', ?, ?, ?, NULL, NULL, ?, ?)",
+        "INSERT INTO venue_jobs (id, status, region, party_size, budget_per_person, result, error, usage, created_at, updated_at) VALUES (?, 'pending', ?, ?, ?, NULL, NULL, NULL, ?, ?)",
       ).run(id, region, partySize, budgetPerPerson, now, now);
       return {
         id,
@@ -100,6 +113,7 @@ export function createVenueJobStore(dbPath: string) {
         budgetPerPerson,
         result: null,
         error: null,
+        usage: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -109,8 +123,12 @@ export function createVenueJobStore(dbPath: string) {
       touch(id, { status: "running" });
     },
 
-    markDone(id: string, result: RankedVenue[]) {
-      touch(id, { status: "done", result: JSON.stringify(result) });
+    markDone(id: string, result: RankedVenue[], usage: GenerationUsage | null = null) {
+      touch(id, {
+        status: "done",
+        result: JSON.stringify(result),
+        usage: usage ? JSON.stringify(usage) : null,
+      });
     },
 
     markError(id: string, message: string) {

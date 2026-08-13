@@ -11,33 +11,38 @@ describe("generateVenues (GENERATE_FIXTURE=1)", () => {
   });
 
   it("실제 웹검색 없이 지역당 5곳 이상의 회식 업종 후보를 반환한다", async () => {
-    const ranked = await generateVenues("강남", 8, 30000);
-    expect(ranked.length).toBeGreaterThanOrEqual(5);
-    expect(ranked).toHaveLength(5);
+    const { results } = await generateVenues("강남", 8, 30000);
+    expect(results.length).toBeGreaterThanOrEqual(5);
+    expect(results).toHaveLength(5);
   });
 
   it("반환된 모든 후보의 category가 회식 업종 화이트리스트에 속한다", async () => {
-    const ranked = await generateVenues("강남", 8, 30000);
-    for (const { venue } of ranked) {
+    const { results } = await generateVenues("강남", 8, 30000);
+    for (const { venue } of results) {
       expect(ALLOWED_CATEGORIES).toContain(venue.category);
     }
   });
 
   it("예산 이내 후보와 초과 후보가 섞이면 기존 rankVenueCandidates와 동일한 순서(예산적합도 우선)로 정렬된다", async () => {
-    const ranked = await generateVenues("강남", 8, 30000);
-    const overBudgetIndex = ranked.findIndex((r) => !r.withinBudget);
+    const { results } = await generateVenues("강남", 8, 30000);
+    const overBudgetIndex = results.findIndex((r) => !r.withinBudget);
     if (overBudgetIndex === -1) return; // fixture 구성상 전원 이내일 수도 있음
-    const laterAllOverBudget = ranked.slice(overBudgetIndex).every((r) => !r.withinBudget);
+    const laterAllOverBudget = results.slice(overBudgetIndex).every((r) => !r.withinBudget);
     expect(laterAllOverBudget).toBe(true);
   });
 
   it("반환된 rating·reviewCount는 fixture 값 그대로이며 고정 상수로 대체되지 않는다", async () => {
-    const ranked = await generateVenues("강남", 8, 30000);
-    const ratings = new Set(ranked.map((r) => r.venue.rating));
-    const reviewCounts = new Set(ranked.map((r) => r.venue.reviewCount));
+    const { results } = await generateVenues("강남", 8, 30000);
+    const ratings = new Set(results.map((r) => r.venue.rating));
+    const reviewCounts = new Set(results.map((r) => r.venue.reviewCount));
     // 서로 다른 값이 섞여 있어야 한다 — 전부 같은 값이면 고정 상수로 대체됐다는 신호
     expect(ratings.size).toBeGreaterThan(1);
     expect(reviewCounts.size).toBeGreaterThan(1);
+  });
+
+  it("fixture 모드에서는 usage가 null이다 (실제 생성이 아니므로 토큰 사용량 없음)", async () => {
+    const { usage } = await generateVenues("강남", 8, 30000);
+    expect(usage).toBeNull();
   });
 });
 

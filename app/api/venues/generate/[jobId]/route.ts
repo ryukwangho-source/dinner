@@ -17,5 +17,6 @@ export async function GET(_request: Request, context: RouteContext) {
     budgetPerPerson: job.budgetPerPerson,
     result: job.result,
     error: job.error,
+    usage: job.usage,
   });
 }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createVenueJobStore, type VenueJobStore } from "@/services/venue-job-store";
+import type { GenerationUsage } from "@/types/generation-usage";
 import type { RankedVenue } from "@/types/recommendation";
 
 function fakeResult(): RankedVenue[] {
@@ -38,6 +39,26 @@ describe("venueJobStore", () => {
     const done = store.get(job.id);
     expect(done?.status).toBe("done");
     expect(done?.result).toEqual(fakeResult());
+  });
+
+  it("markDone에 usage를 함께 넘기면 조회 시 그대로 담겨 나온다", () => {
+    const job = store.create("강남", 8, 30000);
+    const usage: GenerationUsage = {
+      inputTokens: 1200,
+      outputTokens: 300,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      costUsd: 0.01,
+      models: ["claude-sonnet-5"],
+    };
+    store.markDone(job.id, fakeResult(), usage);
+    expect(store.get(job.id)?.usage).toEqual(usage);
+  });
+
+  it("usage 없이 markDone하면 usage는 null이다", () => {
+    const job = store.create("강남", 8, 30000);
+    store.markDone(job.id, fakeResult());
+    expect(store.get(job.id)?.usage).toBeNull();
   });
 
   it("markError로 실패 처리하면 status가 error이고 error 메시지가 담긴다", () => {
