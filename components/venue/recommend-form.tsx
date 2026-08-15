@@ -65,7 +65,7 @@ export function RecommendForm() {
       <div className="text-center">
         <h1 className="text-lg font-bold">회식 장소 추천</h1>
         <p className="text-sm text-muted-foreground">
-          지역·인원수·예산만 입력하면 지역마다 1차·2차 상위 5곳을 추천해드려요
+          지역·인원수·예산만 입력하면 지역마다 도보 10분 이내 1차·2차 상위 5곳을 추천해드려요
         </p>
       </div>
 

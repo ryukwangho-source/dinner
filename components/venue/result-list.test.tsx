@@ -200,6 +200,37 @@ describe("ResultList", () => {
     expect(screen.getByText("1곳 선택됨")).toBeInTheDocument();
   });
 
+  it("전체 선택 클릭 → 모든 카드가 선택되고 버튼 라벨이 전체 해제로 바뀐다", async () => {
+    const user = userEvent.setup();
+    renderList();
+    await user.click(screen.getByRole("button", { name: "전체 선택" }));
+
+    expect(screen.getByText("5곳 선택됨")).toBeInTheDocument();
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      expect(checkbox).toBeChecked();
+    }
+    expect(screen.getByRole("button", { name: "전체 해제" })).toBeInTheDocument();
+  });
+
+  it("전체 선택 후 전체 해제 클릭 → 모든 선택이 풀린다", async () => {
+    const user = userEvent.setup();
+    renderList();
+    await user.click(screen.getByRole("button", { name: "전체 선택" }));
+    await user.click(screen.getByRole("button", { name: "전체 해제" }));
+
+    expect(screen.getByText("0곳 선택됨")).toBeInTheDocument();
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      expect(checkbox).not.toBeChecked();
+    }
+  });
+
+  it("일부만 선택된 상태에서는 전체 선택 버튼이 그대로 유지된다", async () => {
+    const user = userEvent.setup();
+    renderList();
+    await user.click(screen.getAllByRole("checkbox")[0]);
+    expect(screen.getByRole("button", { name: "전체 선택" })).toBeInTheDocument();
+  });
+
   it("진행 중인 투표 목록을 함께 렌더한다", () => {
     const votes: VoteSummary[] = [
       {

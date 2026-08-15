@@ -14,6 +14,9 @@ export const CANDIDATE_COUNT = 12;
 /** 자유 텍스트로 한 번에 입력 가능한 지역 개수 상한 (비용·시간 제한) */
 export const MAX_REGIONS = 5;
 
+/** 요청 지역 기준 도보 시간 상한(분) — 이 이내인 곳만 추천한다. 도보 시간을 알 수 없는 곳도 제외한다 */
+export const MAX_WALKING_MINUTES = 10;
+
 /** 1차(식사 위주) 업종 */
 export const COURSE_ONE_CATEGORIES = [
   "고깃집",

@@ -42,6 +42,12 @@ export function ResultList({
     });
   }
 
+  const allSelected = allRanked.length > 0 && selected.size === allRanked.length;
+
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(allRanked.map((r) => r.venue.id)));
+  }
+
   function selectedVenues() {
     return allRanked.filter((r) => selected.has(r.venue.id)).map((r) => r.venue);
   }
@@ -139,6 +145,13 @@ export function ResultList({
       ))}
 
       <div className="flex flex-col gap-2 rounded-lg border p-3 @md:flex-row">
+        <Button
+          variant="ghost"
+          disabled={allRanked.length === 0}
+          onClick={toggleSelectAll}
+        >
+          {allSelected ? "전체 해제" : "전체 선택"}
+        </Button>
         <span className="self-center text-xs text-muted-foreground @md:mr-auto">
           {selected.size}곳 선택됨
         </span>

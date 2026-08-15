@@ -8,6 +8,7 @@ import {
   COURSE_ONE_CATEGORIES,
   COURSE_TWO_CATEGORIES,
   GENERATION_MODEL,
+  MAX_WALKING_MINUTES,
   RATING_MIN,
   RELAXED_REVIEW_MIN,
   REVIEW_MIN,
@@ -40,6 +41,7 @@ function researchPrompt(region: string, partySize: number): string {
 
 - 지역(기준점): ${region}
 - 인원: ${partySize}명
+- 거리 제한: "${region}"에서 도보 ${MAX_WALKING_MINUTES}분 이내인 곳만 조사한다. 도보 시간을 확인할 수 없는 곳은 아예 후보에서 뺀다.
 - 1차(식사 위주) 업종: ${COURSE_ONE_CATEGORIES.join("·")} — 이 중에서 최소 7곳
 - 2차(1차 이후 갈 만한 간단한 술자리) 업종: ${COURSE_TWO_CATEGORIES.join("·")} — 이 중에서 최소 5곳
 - 총 조사 대상(비용 절감을 위해 딱 필요한 만큼만): ${CANDIDATE_COUNT}곳. 그 이상은 조사하지 않는다. 카페·디저트카페·편의점 등 회식과 무관한 곳은 제외한다.
@@ -111,6 +113,11 @@ export function toVenues(raw: GeneratedVenue[], region: string): Venue[] {
       pricePerPerson: v.pricePerPerson,
       walkingMinutes: v.walkingMinutes ?? null,
     }));
+}
+
+/** 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 후보만 남긴다. 도보 시간을 모르면(null) 제외한다 */
+export function filterWithinWalkingDistance(venues: Venue[]): Venue[] {
+  return venues.filter((v) => v.walkingMinutes !== null && v.walkingMinutes <= MAX_WALKING_MINUTES);
 }
 
 /** 업종으로 1차(식사)·2차(술) 후보를 나눈다 */
@@ -247,7 +254,8 @@ function mergeUsage(usages: (GenerationUsage | null)[]): GenerationUsage | null 
 }
 
 /**
- * 지역마다 회식 장소를 실시간 생성해 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다.
+ * 지역마다 회식 장소를 실시간 생성해, 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 곳 중
+ * 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다.
  * ANTHROPIC_API_KEY가 있으면 직접 API(web_search tool, 검색 횟수 상한 강제 + 구조화 출력),
  * 없으면 Agent SDK(구독 인증) 경로를 쓴다.
  * GENERATE_FIXTURE=1이면 실제 웹검색 없이 고정 fixture를 쓴다(테스트·E2E 전용, 비용 회피).
@@ -261,7 +269,7 @@ export async function generateVenues(
   const perRegion = await Promise.all(
     regions.map(async (region) => {
       const { candidates, usage } = await generateCandidatesForRegion(region, partySize, client);
-      const { courseOne, courseTwo } = splitByCourse(candidates);
+      const { courseOne, courseTwo } = splitByCourse(filterWithinWalkingDistance(candidates));
       return {
         region,
         courseOne: rankVenueCandidates(courseOne, budgetPerPerson).slice(0, TOP_N),

@@ -20,7 +20,7 @@ test("추천받기(GENERATE_FIXTURE) → 로딩 → 지역별 1차·2차 결과 
   await expect(page.getByText("추천 장소를 찾고 있어요")).not.toBeVisible();
 
   const cards = page.getByRole("checkbox");
-  await expect(cards).toHaveCount(10);
+  await expect(cards).toHaveCount(9);
 
   // 2곳 선택 후 저장
   await cards.nth(0).click();

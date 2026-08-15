@@ -3,8 +3,15 @@ import {
   ALLOWED_CATEGORIES,
   COURSE_ONE_CATEGORIES,
   COURSE_TWO_CATEGORIES,
+  MAX_WALKING_MINUTES,
 } from "@/config/venue-generation";
-import { generateVenues, parseVenuesFromText, splitByCourse, toVenues } from "@/services/venue-generator";
+import {
+  filterWithinWalkingDistance,
+  generateVenues,
+  parseVenuesFromText,
+  splitByCourse,
+  toVenues,
+} from "@/services/venue-generator";
 
 describe("generateVenues (GENERATE_FIXTURE=1)", () => {
   beforeEach(() => {
@@ -59,6 +66,36 @@ describe("generateVenues (GENERATE_FIXTURE=1)", () => {
   it("fixture 모드에서는 usage가 null이다 (실제 생성이 아니므로 토큰 사용량 없음)", async () => {
     const { usage } = await generateVenues(["강남"], 8, 30000);
     expect(usage).toBeNull();
+  });
+
+  it(`요청 지역에서 도보 ${MAX_WALKING_MINUTES}분을 초과하는 후보는 결과에 나타나지 않는다`, async () => {
+    const { results } = await generateVenues(["강남"], 8, 30000);
+    const [{ courseOne, courseTwo }] = results;
+    for (const { venue } of [...courseOne, ...courseTwo]) {
+      expect(venue.walkingMinutes).not.toBeNull();
+      expect(venue.walkingMinutes as number).toBeLessThanOrEqual(MAX_WALKING_MINUTES);
+    }
+  });
+});
+
+describe("filterWithinWalkingDistance", () => {
+  it(`도보 ${MAX_WALKING_MINUTES}분을 초과하는 후보는 걸러진다`, () => {
+    const venues = toVenues(
+      [
+        { name: "가까운집", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: MAX_WALKING_MINUTES },
+        { name: "먼집", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: MAX_WALKING_MINUTES + 1 },
+      ],
+      "강남",
+    );
+    expect(filterWithinWalkingDistance(venues).map((v) => v.name)).toEqual(["가까운집"]);
+  });
+
+  it("도보 시간을 알 수 없는(null) 후보도 걸러진다", () => {
+    const venues = toVenues(
+      [{ name: "도보정보없음", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: null }],
+      "강남",
+    );
+    expect(filterWithinWalkingDistance(venues)).toHaveLength(0);
   });
 });
 
