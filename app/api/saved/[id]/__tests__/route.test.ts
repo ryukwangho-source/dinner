@@ -28,6 +28,7 @@ describe("/api/saved/[id]", () => {
         reviewCount: 1204,
         viewCount: 8900,
         pricePerPerson: 28000,
+        walkingMinutes: null,
       },
     ]);
     store.saveMany([
@@ -40,6 +41,7 @@ describe("/api/saved/[id]", () => {
         reviewCount: 615,
         viewCount: 3800,
         pricePerPerson: 22000,
+        walkingMinutes: null,
       },
     ]);
 
@@ -70,6 +72,7 @@ describe("/api/saved/[id]", () => {
         reviewCount: 1204,
         viewCount: 8900,
         pricePerPerson: 28000,
+        walkingMinutes: null,
       },
     ]);
     const res = await deleteSaved(new Request("http://localhost/api/saved/x", { method: "DELETE" }), ctx(a.id));

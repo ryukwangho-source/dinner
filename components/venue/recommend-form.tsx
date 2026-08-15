@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,29 +12,40 @@ import {
   FieldLabel,
   FieldError,
 } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { REGIONS } from "@/config/venues";
+import { MAX_REGIONS } from "@/config/venue-generation";
 import { validateRecommendationInput } from "@/lib/recommendation-validation";
 import type { RecommendationFormErrors } from "@/lib/recommendation-validation";
 
 export function RecommendForm() {
   const router = useRouter();
-  const [region, setRegion] = useState("");
+  const [regions, setRegions] = useState<string[]>([]);
+  const [regionInput, setRegionInput] = useState("");
   const [partySize, setPartySize] = useState("");
   const [budgetPerPerson, setBudgetPerPerson] = useState("");
   const [errors, setErrors] = useState<RecommendationFormErrors>({});
 
+  function addRegion() {
+    const trimmed = regionInput.trim();
+    if (!trimmed || regions.includes(trimmed) || regions.length >= MAX_REGIONS) return;
+    setRegions([...regions, trimmed]);
+    setRegionInput("");
+  }
+
+  function removeRegion(region: string) {
+    setRegions(regions.filter((r) => r !== region));
+  }
+
+  function handleRegionKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addRegion();
+    }
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const validationErrors = validateRecommendationInput({
-      region,
+      regions,
       partySize,
       budgetPerPerson,
     });
@@ -40,7 +53,7 @@ export function RecommendForm() {
     if (Object.keys(validationErrors).length > 0) return;
 
     const params = new URLSearchParams({
-      region,
+      regions: regions.join(","),
       people: partySize,
       budget: budgetPerPerson,
     });
@@ -52,7 +65,7 @@ export function RecommendForm() {
       <div className="text-center">
         <h1 className="text-lg font-bold">회식 장소 추천</h1>
         <p className="text-sm text-muted-foreground">
-          지역·인원수·예산만 입력하면 상위 5곳을 추천해드려요
+          지역·인원수·예산만 입력하면 지역마다 1차·2차 상위 5곳을 추천해드려요
         </p>
       </div>
 
@@ -60,20 +73,36 @@ export function RecommendForm() {
         <FieldGroup>
           <Field data-invalid={!!errors.region}>
             <FieldLabel htmlFor="region">지역</FieldLabel>
-            <Select value={region} onValueChange={setRegion}>
-              <SelectTrigger id="region" className="w-full" aria-invalid={!!errors.region}>
-                <SelectValue placeholder="지역을 선택하세요" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {REGIONS.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Input
+                id="region"
+                placeholder="예: 강남역 (Enter로 추가)"
+                value={regionInput}
+                aria-invalid={!!errors.region}
+                onChange={(e) => setRegionInput(e.target.value)}
+                onKeyDown={handleRegionKeyDown}
+              />
+              <Button type="button" variant="secondary" onClick={addRegion}>
+                추가
+              </Button>
+            </div>
+            {regions.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {regions.map((r) => (
+                  <Badge key={r} variant="secondary" className="gap-1 py-1 pl-3 pr-1">
+                    {r}
+                    <button
+                      type="button"
+                      aria-label={`${r} 삭제`}
+                      onClick={() => removeRegion(r)}
+                      className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
             <FieldError errors={errors.region ? [{ message: errors.region }] : undefined} />
           </Field>
 

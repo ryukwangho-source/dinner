@@ -13,6 +13,7 @@ const venue: Venue = {
   reviewCount: 1204,
   viewCount: 8900,
   pricePerPerson: 28000,
+  walkingMinutes: 5,
 };
 
 describe("VenueCard", () => {
@@ -53,5 +54,22 @@ describe("VenueCard", () => {
     );
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("walkingMinutes가 있으면 요청 지역 기준 도보 시간을 표시한다", () => {
+    render(<VenueCard venue={venue} withinBudget checked={false} onCheckedChange={() => {}} />);
+    expect(screen.getByText(/도보 5분/)).toBeInTheDocument();
+  });
+
+  it("walkingMinutes가 null이면 도보 시간을 표시하지 않는다", () => {
+    render(
+      <VenueCard
+        venue={{ ...venue, walkingMinutes: null }}
+        withinBudget
+        checked={false}
+        onCheckedChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/도보/)).not.toBeInTheDocument();
   });
 });

@@ -8,19 +8,19 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VenueCard } from "@/components/venue/venue-card";
 import { ActiveVotesList } from "@/components/vote/active-votes-list";
 import { shareVenues } from "@/lib/venue-share";
-import type { RankedVenue } from "@/types/recommendation";
+import type { RegionRecommendation } from "@/types/recommendation";
 import type { VoteSummary } from "@/types/vote";
 
 export interface ResultListProps {
-  region: string;
+  regions: string[];
   partySize: number;
   budgetPerPerson: number;
-  results: RankedVenue[];
+  results: RegionRecommendation[];
   votes: VoteSummary[];
 }
 
 export function ResultList({
-  region,
+  regions,
   partySize,
   budgetPerPerson,
   results,
@@ -29,7 +29,9 @@ export function ResultList({
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
-  const noneWithinBudget = results.length > 0 && results.every((r) => !r.withinBudget);
+
+  const allRanked = results.flatMap((r) => [...r.courseOne, ...r.courseTwo]);
+  const noneWithinBudget = allRanked.length > 0 && allRanked.every((r) => !r.withinBudget);
 
   function toggle(id: string, checked: boolean) {
     setSelected((prev) => {
@@ -41,7 +43,7 @@ export function ResultList({
   }
 
   function selectedVenues() {
-    return results.filter((r) => selected.has(r.venue.id)).map((r) => r.venue);
+    return allRanked.filter((r) => selected.has(r.venue.id)).map((r) => r.venue);
   }
 
   async function handleSave() {
@@ -81,7 +83,7 @@ export function ResultList({
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
       <div className="text-xs text-muted-foreground">
-        {region} · {partySize}명 · 1인 {budgetPerPerson.toLocaleString("ko-KR")}원
+        {regions.join(", ")} · {partySize}명 · 1인 {budgetPerPerson.toLocaleString("ko-KR")}원
       </div>
 
       {noneWithinBudget && (
@@ -92,17 +94,49 @@ export function ResultList({
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
-        {results.map(({ venue, withinBudget }) => (
-          <VenueCard
-            key={venue.id}
-            venue={venue}
-            withinBudget={withinBudget}
-            checked={selected.has(venue.id)}
-            onCheckedChange={(checked) => toggle(venue.id, checked)}
-          />
-        ))}
-      </div>
+      {results.map(({ region, courseOne, courseTwo }) => (
+        <div key={region} className="flex flex-col gap-3">
+          <h2 className="text-sm font-bold">{region}</h2>
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold text-muted-foreground">1차 · 식사</h3>
+            {courseOne.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
+                {courseOne.map(({ venue, withinBudget }) => (
+                  <VenueCard
+                    key={venue.id}
+                    venue={venue}
+                    withinBudget={withinBudget}
+                    checked={selected.has(venue.id)}
+                    onCheckedChange={(checked) => toggle(venue.id, checked)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">추천할 곳을 찾지 못했어요</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-semibold text-muted-foreground">2차 · 가볍게 한잔</h3>
+            {courseTwo.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
+                {courseTwo.map(({ venue, withinBudget }) => (
+                  <VenueCard
+                    key={venue.id}
+                    venue={venue}
+                    withinBudget={withinBudget}
+                    checked={selected.has(venue.id)}
+                    onCheckedChange={(checked) => toggle(venue.id, checked)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">추천할 곳을 찾지 못했어요</p>
+            )}
+          </div>
+        </div>
+      ))}
 
       <div className="flex flex-col gap-2 rounded-lg border p-3 @md:flex-row">
         <span className="self-center text-xs text-muted-foreground @md:mr-auto">

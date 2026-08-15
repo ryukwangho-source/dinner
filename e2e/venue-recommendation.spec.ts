@@ -4,8 +4,8 @@ test("입력 오류→재제출→추천→선택 저장→저장 목록 확인�
   await page.goto("/");
 
   // 미완성 입력 → 입력해주세요 안내, 화면 전환 없음
-  await page.getByRole("combobox").click();
-  await page.getByRole("option", { name: "오산역" }).click();
+  await page.getByLabel("지역").fill("오산역");
+  await page.getByLabel("지역").press("Enter");
   await page.getByRole("button", { name: "추천받기" }).click();
   await expect(page.getByText("입력해주세요").first()).toBeVisible();
   await expect(page).toHaveURL("/");
@@ -16,8 +16,9 @@ test("입력 오류→재제출→추천→선택 저장→저장 목록 확인�
   await page.getByRole("button", { name: "추천받기" }).click();
 
   await expect(page).toHaveURL(/\/results\?/);
+  await expect(page.getByText("1차 · 식사")).toBeVisible({ timeout: 30_000 });
   const cards = page.getByRole("checkbox");
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(10);
 
   // 2곳 선택 후 저장
   await cards.nth(0).click();

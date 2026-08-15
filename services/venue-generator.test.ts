@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ALLOWED_CATEGORIES } from "@/config/venue-generation";
-import { generateVenues, parseVenuesFromText, toVenues } from "@/services/venue-generator";
+import {
+  ALLOWED_CATEGORIES,
+  COURSE_ONE_CATEGORIES,
+  COURSE_TWO_CATEGORIES,
+} from "@/config/venue-generation";
+import { generateVenues, parseVenuesFromText, splitByCourse, toVenues } from "@/services/venue-generator";
 
 describe("generateVenues (GENERATE_FIXTURE=1)", () => {
   beforeEach(() => {
@@ -10,48 +14,60 @@ describe("generateVenues (GENERATE_FIXTURE=1)", () => {
     delete process.env.GENERATE_FIXTURE;
   });
 
-  it("실제 웹검색 없이 지역당 5곳 이상의 회식 업종 후보를 반환한다", async () => {
-    const { results } = await generateVenues("강남", 8, 30000);
-    expect(results.length).toBeGreaterThanOrEqual(5);
-    expect(results).toHaveLength(5);
+  it("지역 하나당 1차·2차 각각 상위 5곳까지 반환한다", async () => {
+    const { results } = await generateVenues(["강남"], 8, 30000);
+    expect(results).toHaveLength(1);
+    expect(results[0].region).toBe("강남");
+    expect(results[0].courseOne.length).toBeGreaterThan(0);
+    expect(results[0].courseOne.length).toBeLessThanOrEqual(5);
+    expect(results[0].courseTwo.length).toBeGreaterThan(0);
+    expect(results[0].courseTwo.length).toBeLessThanOrEqual(5);
   });
 
-  it("반환된 모든 후보의 category가 회식 업종 화이트리스트에 속한다", async () => {
-    const { results } = await generateVenues("강남", 8, 30000);
-    for (const { venue } of results) {
-      expect(ALLOWED_CATEGORIES).toContain(venue.category);
+  it("1차 후보는 식사 업종, 2차 후보는 간단한 술 업종에만 속한다", async () => {
+    const { results } = await generateVenues(["강남"], 8, 30000);
+    const [{ courseOne, courseTwo }] = results;
+    for (const { venue } of courseOne) {
+      expect(COURSE_ONE_CATEGORIES).toContain(venue.category);
+    }
+    for (const { venue } of courseTwo) {
+      expect(COURSE_TWO_CATEGORIES).toContain(venue.category);
     }
   });
 
-  it("예산 이내 후보와 초과 후보가 섞이면 기존 rankVenueCandidates와 동일한 순서(예산적합도 우선)로 정렬된다", async () => {
-    const { results } = await generateVenues("강남", 8, 30000);
-    const overBudgetIndex = results.findIndex((r) => !r.withinBudget);
-    if (overBudgetIndex === -1) return; // fixture 구성상 전원 이내일 수도 있음
-    const laterAllOverBudget = results.slice(overBudgetIndex).every((r) => !r.withinBudget);
-    expect(laterAllOverBudget).toBe(true);
+  it("여러 지역을 입력하면 지역마다 각각 별도의 추천 결과가 반환된다", async () => {
+    const { results } = await generateVenues(["강남", "홍대"], 8, 30000);
+    expect(results.map((r) => r.region)).toEqual(["강남", "홍대"]);
+    for (const { courseOne, courseTwo } of results) {
+      for (const { venue } of [...courseOne, ...courseTwo]) {
+        expect(ALLOWED_CATEGORIES).toContain(venue.category);
+      }
+    }
   });
 
   it("반환된 rating·reviewCount는 fixture 값 그대로이며 고정 상수로 대체되지 않는다", async () => {
-    const { results } = await generateVenues("강남", 8, 30000);
-    const ratings = new Set(results.map((r) => r.venue.rating));
-    const reviewCounts = new Set(results.map((r) => r.venue.reviewCount));
+    const { results } = await generateVenues(["강남"], 8, 30000);
+    const [{ courseOne, courseTwo }] = results;
+    const all = [...courseOne, ...courseTwo];
+    const ratings = new Set(all.map((r) => r.venue.rating));
+    const reviewCounts = new Set(all.map((r) => r.venue.reviewCount));
     // 서로 다른 값이 섞여 있어야 한다 — 전부 같은 값이면 고정 상수로 대체됐다는 신호
     expect(ratings.size).toBeGreaterThan(1);
     expect(reviewCounts.size).toBeGreaterThan(1);
   });
 
   it("fixture 모드에서는 usage가 null이다 (실제 생성이 아니므로 토큰 사용량 없음)", async () => {
-    const { usage } = await generateVenues("강남", 8, 30000);
+    const { usage } = await generateVenues(["강남"], 8, 30000);
     expect(usage).toBeNull();
   });
 });
 
 describe("parseVenuesFromText", () => {
   it("JSON 코드 블록에서 venues 배열을 추출한다", () => {
-    const text = '설명 텍스트\n```json\n{"venues":[{"name":"테스트집","category":"고깃집","rating":4.5,"reviewCount":100,"pricePerPerson":25000}]}\n```';
+    const text = '설명 텍스트\n```json\n{"venues":[{"name":"테스트집","category":"고깃집","rating":4.5,"reviewCount":100,"pricePerPerson":25000,"walkingMinutes":5}]}\n```';
     const venues = parseVenuesFromText(text);
     expect(venues).toEqual([
-      { name: "테스트집", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000 },
+      { name: "테스트집", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: 5 },
     ]);
   });
 
@@ -63,8 +79,8 @@ describe("parseVenuesFromText", () => {
 describe("toVenues", () => {
   it("화이트리스트에 없는 업종은 걸러진다", () => {
     const raw = [
-      { name: "정상집", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000 },
-      { name: "카페", category: "카페", rating: 4.5, reviewCount: 100, pricePerPerson: 8000 },
+      { name: "정상집", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: 5 },
+      { name: "카페", category: "카페", rating: 4.5, reviewCount: 100, pricePerPerson: 8000, walkingMinutes: 3 },
     ];
     const venues = toVenues(raw, "강남");
     expect(venues).toHaveLength(1);
@@ -73,8 +89,30 @@ describe("toVenues", () => {
 
   it("평점·리뷰수 문턱 미달 후보는 걸러진다", () => {
     const raw = [
-      { name: "저평점집", category: "고깃집", rating: 3.0, reviewCount: 100, pricePerPerson: 25000 },
+      { name: "저평점집", category: "고깃집", rating: 3.0, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: 5 },
     ];
     expect(toVenues(raw, "강남")).toHaveLength(0);
+  });
+
+  it("walkingMinutes가 null이면 그대로 null로 매핑된다", () => {
+    const raw = [
+      { name: "도보정보없음", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: null },
+    ];
+    expect(toVenues(raw, "강남")[0].walkingMinutes).toBeNull();
+  });
+});
+
+describe("splitByCourse", () => {
+  it("업종에 따라 1차(식사)·2차(술) 후보로 나눈다", () => {
+    const venues = toVenues(
+      [
+        { name: "고깃집A", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: null },
+        { name: "이자카야A", category: "이자카야", rating: 4.5, reviewCount: 100, pricePerPerson: 20000, walkingMinutes: null },
+      ],
+      "강남",
+    );
+    const { courseOne, courseTwo } = splitByCourse(venues);
+    expect(courseOne.map((v) => v.name)).toEqual(["고깃집A"]);
+    expect(courseTwo.map((v) => v.name)).toEqual(["이자카야A"]);
   });
 });

@@ -25,6 +25,7 @@ function makeVenue(id: string, name: string, price: number): Venue {
     reviewCount: 100,
     viewCount: 1000,
     pricePerPerson: price,
+    walkingMinutes: null,
   };
 }
 

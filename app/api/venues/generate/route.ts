@@ -1,9 +1,12 @@
 import { z } from "zod";
-import { REGIONS } from "@/config/venues";
+import { MAX_REGIONS } from "@/config/venue-generation";
 import { startGeneration } from "@/services/venue-generation-runner";
 
 const generateBodySchema = z.object({
-  region: z.string().refine((v) => REGIONS.includes(v), { message: "지원하지 않는 지역입니다" }),
+  regions: z
+    .array(z.string().trim().min(1))
+    .min(1, "지역을 입력해주세요")
+    .max(MAX_REGIONS, `지역은 최대 ${MAX_REGIONS}곳까지 입력할 수 있어요`),
   partySize: z.coerce.number().int().positive(),
   budgetPerPerson: z.coerce.number().positive(),
 });
@@ -26,8 +29,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "잘못된 요청입니다" }, { status: 400 });
   }
 
-  const { region, partySize, budgetPerPerson } = parsed.data;
-  const job = startGeneration(region, partySize, budgetPerPerson);
+  const { regions, partySize, budgetPerPerson } = parsed.data;
+  const job = startGeneration(regions, partySize, budgetPerPerson);
   return Response.json(
     { jobId: job.id, status: job.status },
     { status: job.status === "done" ? 200 : 202 },

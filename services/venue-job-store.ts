@@ -4,17 +4,17 @@ import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { CACHE_TTL_MS } from "@/config/venue-generation";
 import type { GenerationUsage } from "@/types/generation-usage";
-import type { RankedVenue } from "@/types/recommendation";
+import type { RegionRecommendation } from "@/types/recommendation";
 
 export type VenueJobStatus = "pending" | "running" | "done" | "error";
 
 export interface VenueGenerationJob {
   id: string;
   status: VenueJobStatus;
-  region: string;
+  regions: string[];
   partySize: number;
   budgetPerPerson: number;
-  result: RankedVenue[] | null;
+  result: RegionRecommendation[] | null;
   error: string | null;
   usage: GenerationUsage | null;
   createdAt: string;
@@ -24,7 +24,7 @@ export interface VenueGenerationJob {
 interface VenueJobRow {
   id: string;
   status: VenueJobStatus;
-  region: string;
+  regions: string;
   party_size: number;
   budget_per_person: number;
   result: string | null;
@@ -38,10 +38,10 @@ function rowToJob(row: VenueJobRow): VenueGenerationJob {
   return {
     id: row.id,
     status: row.status,
-    region: row.region,
+    regions: JSON.parse(row.regions) as string[],
     partySize: row.party_size,
     budgetPerPerson: row.budget_per_person,
-    result: row.result ? (JSON.parse(row.result) as RankedVenue[]) : null,
+    result: row.result ? (JSON.parse(row.result) as RegionRecommendation[]) : null,
     error: row.error,
     usage: row.usage ? (JSON.parse(row.usage) as GenerationUsage) : null,
     createdAt: row.created_at,
@@ -51,8 +51,8 @@ function rowToJob(row: VenueJobRow): VenueGenerationJob {
 
 /**
  * 실시간 장소 생성 작업 저장소. 화면 이탈·새로고침에도 지속되도록 SQLite에 남긴다
- * (travel의 job-store.ts와 동일 패턴). region+partySize+budgetPerPerson 조합으로
- * 캐시(findFresh)·진행 중 작업 재사용(findActive)을 조회한다.
+ * (travel의 job-store.ts와 동일 패턴). regions(JSON 배열, 입력 순서 그대로 비교)+
+ * partySize+budgetPerPerson 조합으로 캐시(findFresh)·진행 중 작업 재사용(findActive)을 조회한다.
  */
 export function createVenueJobStore(dbPath: string) {
   if (dbPath !== ":memory:") {
@@ -64,7 +64,7 @@ export function createVenueJobStore(dbPath: string) {
     CREATE TABLE IF NOT EXISTS venue_jobs (
       id TEXT PRIMARY KEY,
       status TEXT NOT NULL,
-      region TEXT NOT NULL,
+      regions TEXT NOT NULL,
       party_size INTEGER NOT NULL,
       budget_per_person INTEGER NOT NULL,
       result TEXT,
@@ -74,17 +74,9 @@ export function createVenueJobStore(dbPath: string) {
       updated_at TEXT NOT NULL
     )
   `);
-  // 기존 DB에는 usage 컬럼이 없을 수 있다 — CREATE TABLE IF NOT EXISTS는 이미
-  // 있는 테이블에 컬럼을 추가하지 않으므로 직접 확인 후 붙인다.
-  const hasUsageColumn = (
-    db.prepare("PRAGMA table_info(venue_jobs)").all() as { name: string }[]
-  ).some((c) => c.name === "usage");
-  if (!hasUsageColumn) {
-    db.exec("ALTER TABLE venue_jobs ADD COLUMN usage TEXT");
-  }
 
   const findByKeyStmt = db.prepare(
-    "SELECT * FROM venue_jobs WHERE region = ? AND party_size = ? AND budget_per_person = ? AND status = ? ORDER BY created_at DESC LIMIT 1",
+    "SELECT * FROM venue_jobs WHERE regions = ? AND party_size = ? AND budget_per_person = ? AND status = ? ORDER BY created_at DESC LIMIT 1",
   );
 
   function touch(id: string, patch: Partial<VenueJobRow>) {
@@ -99,16 +91,17 @@ export function createVenueJobStore(dbPath: string) {
   }
 
   return {
-    create(region: string, partySize: number, budgetPerPerson: number): VenueGenerationJob {
+    create(regions: string[], partySize: number, budgetPerPerson: number): VenueGenerationJob {
       const id = randomUUID();
       const now = new Date().toISOString();
+      const regionsJson = JSON.stringify(regions);
       db.prepare(
-        "INSERT INTO venue_jobs (id, status, region, party_size, budget_per_person, result, error, usage, created_at, updated_at) VALUES (?, 'pending', ?, ?, ?, NULL, NULL, NULL, ?, ?)",
-      ).run(id, region, partySize, budgetPerPerson, now, now);
+        "INSERT INTO venue_jobs (id, status, regions, party_size, budget_per_person, result, error, usage, created_at, updated_at) VALUES (?, 'pending', ?, ?, ?, NULL, NULL, NULL, ?, ?)",
+      ).run(id, regionsJson, partySize, budgetPerPerson, now, now);
       return {
         id,
         status: "pending",
-        region,
+        regions,
         partySize,
         budgetPerPerson,
         result: null,
@@ -123,7 +116,7 @@ export function createVenueJobStore(dbPath: string) {
       touch(id, { status: "running" });
     },
 
-    markDone(id: string, result: RankedVenue[], usage: GenerationUsage | null = null) {
+    markDone(id: string, result: RegionRecommendation[], usage: GenerationUsage | null = null) {
       touch(id, {
         status: "done",
         result: JSON.stringify(result),
@@ -144,12 +137,12 @@ export function createVenueJobStore(dbPath: string) {
 
     /** 같은 조합의 6시간 이내 완료된 작업(캐시) — 있으면 새 생성 없이 재사용 */
     findFresh(
-      region: string,
+      regions: string[],
       partySize: number,
       budgetPerPerson: number,
       now = new Date(),
     ): VenueGenerationJob | null {
-      const row = findByKeyStmt.get(region, partySize, budgetPerPerson, "done") as
+      const row = findByKeyStmt.get(JSON.stringify(regions), partySize, budgetPerPerson, "done") as
         | VenueJobRow
         | undefined;
       if (!row) return null;
@@ -159,9 +152,10 @@ export function createVenueJobStore(dbPath: string) {
     },
 
     /** 같은 조합으로 아직 진행 중인 작업 — 있으면 새로고침해도 중복 생성하지 않는다 */
-    findActive(region: string, partySize: number, budgetPerPerson: number): VenueGenerationJob | null {
+    findActive(regions: string[], partySize: number, budgetPerPerson: number): VenueGenerationJob | null {
+      const regionsJson = JSON.stringify(regions);
       for (const status of ["pending", "running"] as const) {
-        const row = findByKeyStmt.get(region, partySize, budgetPerPerson, status) as
+        const row = findByKeyStmt.get(regionsJson, partySize, budgetPerPerson, status) as
           | VenueJobRow
           | undefined;
         if (row) return rowToJob(row);

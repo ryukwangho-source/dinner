@@ -5,7 +5,9 @@ import { VenueResultsFlow } from "@/components/venue/venue-results-flow";
 import type { VoteSummary } from "@/types/vote";
 
 vi.mock("@/components/venue/result-list", () => ({
-  ResultList: ({ region }: { region: string }) => <div data-testid="result-list">결과: {region}</div>,
+  ResultList: ({ regions }: { regions: string[] }) => (
+    <div data-testid="result-list">결과: {regions.join(",")}</div>
+  ),
 }));
 
 const votes: VoteSummary[] = [];
@@ -42,7 +44,7 @@ describe("VenueResultsFlow", () => {
   it("진입 시 생성 시작 안내(로딩)가 먼저 보인다", () => {
     mockServer("pending");
     render(
-      <VenueResultsFlow region="강남" partySize={8} budgetPerPerson={30000} votes={votes} />,
+      <VenueResultsFlow regions={["강남"]} partySize={8} budgetPerPerson={30000} votes={votes} />,
     );
     expect(screen.getByText("추천 장소를 찾고 있어요")).toBeInTheDocument();
   });
@@ -50,7 +52,7 @@ describe("VenueResultsFlow", () => {
   it("폴링 끝에 완료되면 결과 화면으로 전환된다", async () => {
     const state = mockServer("pending");
     render(
-      <VenueResultsFlow region="강남" partySize={8} budgetPerPerson={30000} votes={votes} />,
+      <VenueResultsFlow regions={["강남"]} partySize={8} budgetPerPerson={30000} votes={votes} />,
     );
     state.status = "done";
     await vi.advanceTimersByTimeAsync(3000);
@@ -60,7 +62,7 @@ describe("VenueResultsFlow", () => {
   it("생성 실패로 끝나면 실패 안내와 다시 시도 버튼이 보인다", async () => {
     const state = mockServer("pending");
     render(
-      <VenueResultsFlow region="강남" partySize={8} budgetPerPerson={30000} votes={votes} />,
+      <VenueResultsFlow regions={["강남"]} partySize={8} budgetPerPerson={30000} votes={votes} />,
     );
     state.status = "error";
     await vi.advanceTimersByTimeAsync(3000);
@@ -70,7 +72,7 @@ describe("VenueResultsFlow", () => {
   it("실패 후 다시 시도 클릭 → 로딩 화면으로 돌아가고 다시 생성이 시작된다", async () => {
     const state = mockServer("error");
     render(
-      <VenueResultsFlow region="강남" partySize={8} budgetPerPerson={30000} votes={votes} />,
+      <VenueResultsFlow regions={["강남"]} partySize={8} budgetPerPerson={30000} votes={votes} />,
     );
     await vi.advanceTimersByTimeAsync(3000);
     await screen.findByText("추천 생성에 실패했어요");

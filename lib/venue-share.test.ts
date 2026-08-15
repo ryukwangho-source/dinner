@@ -1,42 +1,61 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildShareText, copyVoteLink, shareVenues, shareVoteLink } from "@/lib/venue-share";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
-import type { RankedVenue } from "@/types/recommendation";
+import type { RegionRecommendation } from "@/types/recommendation";
 
-function makeVenue(id: string, name: string, price: number) {
+function makeVenue(id: string, name: string, price: number, region = "강남역") {
   return {
     id,
     name,
     category: "고깃집",
-    region: "강남역",
+    region,
     rating: 4.5,
     reviewCount: 100,
     viewCount: 1000,
     pricePerPerson: price,
+    walkingMinutes: null,
   };
 }
 
-const results: RankedVenue[] = [
-  { venue: makeVenue("a", "숯불향 강남점", 28000), withinBudget: true },
-  { venue: makeVenue("b", "이자카야 온기", 29500), withinBudget: true },
-  { venue: makeVenue("c", "모던삼겹 강남", 27000), withinBudget: true },
-  { venue: makeVenue("d", "오마카세 결", 42000), withinBudget: false },
-  { venue: makeVenue("e", "호프집 강남불빛", 22000), withinBudget: true },
+const results: RegionRecommendation[] = [
+  {
+    region: "강남역",
+    courseOne: [
+      { venue: makeVenue("a", "숯불향 강남점", 28000), withinBudget: true },
+      { venue: makeVenue("c", "모던삼겹 강남", 27000), withinBudget: true },
+      { venue: makeVenue("d", "오마카세 결", 42000), withinBudget: false },
+    ],
+    courseTwo: [
+      { venue: makeVenue("b", "이자카야 온기", 29500), withinBudget: true },
+      { venue: makeVenue("e", "호프집 강남불빛", 22000), withinBudget: true },
+    ],
+  },
 ];
 
 describe("buildShareText", () => {
-  it("5곳의 이름이 모두 포함된다", () => {
+  it("모든 장소 이름이 포함된다", () => {
     const text = buildShareText(results);
-    for (const { venue } of results) {
-      expect(text).toContain(venue.name);
+    for (const { courseOne, courseTwo } of results) {
+      for (const { venue } of [...courseOne, ...courseTwo]) {
+        expect(text).toContain(venue.name);
+      }
     }
   });
 
   it("각 장소마다 네이버 검색 링크가 함께 포함된다", () => {
     const text = buildShareText(results);
-    for (const { venue } of results) {
-      expect(text).toContain(naverMapSearchUrl(venue.name, venue.region));
+    for (const { courseOne, courseTwo } of results) {
+      for (const { venue } of [...courseOne, ...courseTwo]) {
+        expect(text).toContain(naverMapSearchUrl(venue.name, venue.region));
+      }
     }
+  });
+
+  it("지역명과 1차·2차 구분 라벨이 포함된다", () => {
+    const text = buildShareText(results);
+    expect(text).toContain("[강남역]");
+    expect(text).toContain("1차");
+    expect(text).toContain("2차");
   });
 });
 

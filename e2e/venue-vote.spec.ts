@@ -5,7 +5,8 @@ import { expect, test } from "@playwright/test";
 const VOTES_DB_PATH = path.join(process.cwd(), "data", "votes-e2e.db");
 
 test("선택없이 투표만들기 시도→안내→투표 생성→링크 접속→투표→변경 전체 흐름", async ({ page }) => {
-  await page.goto("/results?region=%EC%98%A4%EC%82%B0%EC%97%AD&people=8&budget=30000");
+  await page.goto("/results?regions=%EC%98%A4%EC%82%B0%EC%97%AD&people=8&budget=30000");
+  await expect(page.getByText("1차 · 식사")).toBeVisible({ timeout: 30_000 });
 
   // 선택 없이 투표 만들기 시도 → 안내, 이동 없음
   await page.getByRole("button", { name: "투표 만들기" }).click();
@@ -58,6 +59,7 @@ test("이미 마감된 투표 링크 접속 → 투표 UI 없이 최종 득표�
     reviewCount: 500,
     viewCount: 4000,
     pricePerPerson: 28000,
+    walkingMinutes: null,
   });
   const res = await request.post("/api/votes", {
     data: {

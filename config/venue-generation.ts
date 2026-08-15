@@ -8,14 +8,15 @@ export const RELAXED_REVIEW_MIN = 5;
 export const GENERATION_MODEL = "claude-sonnet-5";
 /** 1콜(웹 검색·종합)의 검색 횟수 상한 — 비용 절감 */
 export const WEB_SEARCH_MAX_USES = 5;
-/** 상위 5곳을 추리기 위해 넉넉히 조사할 후보 개수 */
-export const CANDIDATE_COUNT = 8;
+/** 지역 하나당 1차·2차 각각 상위 5곳을 추리기 위해 넉넉히 조사할 후보 개수 */
+export const CANDIDATE_COUNT = 12;
 
-/** 회식에 어울리는 업종 화이트리스트 — 카페·편의점 등 회식과 무관한 곳을 걸러낸다 */
-export const ALLOWED_CATEGORIES = [
+/** 자유 텍스트로 한 번에 입력 가능한 지역 개수 상한 (비용·시간 제한) */
+export const MAX_REGIONS = 5;
+
+/** 1차(식사 위주) 업종 */
+export const COURSE_ONE_CATEGORIES = [
   "고깃집",
-  "이자카야",
-  "호프",
   "일식",
   "해물",
   "찜",
@@ -24,6 +25,12 @@ export const ALLOWED_CATEGORIES = [
   "중식",
   "횟집",
 ] as const;
+
+/** 2차(간단한 술 위주, 1차 이후 갈 만한 곳) 업종 */
+export const COURSE_TWO_CATEGORIES = ["이자카야", "호프"] as const;
+
+/** 회식에 어울리는 업종 화이트리스트 전체 — 카페·편의점 등 회식과 무관한 곳을 걸러낸다 */
+export const ALLOWED_CATEGORIES = [...COURSE_ONE_CATEGORIES, ...COURSE_TWO_CATEGORIES] as const;
 
 /** 같은 지역·인원수·예산 조합의 생성 결과를 재사용하는 유효 시간 */
 export const CACHE_TTL_MS = 6 * 60 * 60 * 1000;

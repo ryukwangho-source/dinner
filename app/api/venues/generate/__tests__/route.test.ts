@@ -32,7 +32,7 @@ afterEach(() => {
 describe("/api/venues/generate", () => {
   it("최초 요청 → 202와 jobId가 반환된다", async () => {
     const res = await generateVenuesRoute(
-      jsonRequest({ region: "강남", partySize: 8, budgetPerPerson: 30000 }),
+      jsonRequest({ regions: ["강남"], partySize: 8, budgetPerPerson: 30000 }),
     );
     expect(res.status).toBe(202);
     const body = await res.json();
@@ -40,11 +40,11 @@ describe("/api/venues/generate", () => {
   });
 
   it("6시간 이내 캐시된 done job이 있으면 새로 만들지 않고 즉시 그 결과가 반환된다", async () => {
-    const cached = store.create("강남", 8, 30000);
+    const cached = store.create(["강남"], 8, 30000);
     store.markDone(cached.id, []);
 
     const res = await generateVenuesRoute(
-      jsonRequest({ region: "강남", partySize: 8, budgetPerPerson: 30000 }),
+      jsonRequest({ regions: ["강남"], partySize: 8, budgetPerPerson: 30000 }),
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -53,24 +53,35 @@ describe("/api/venues/generate", () => {
   });
 
   it("같은 조합으로 진행 중인 job이 있으면 새 job을 만들지 않고 기존 jobId를 반환한다", async () => {
-    const existing = store.create("강남", 8, 30000);
+    const existing = store.create(["강남"], 8, 30000);
 
     const res = await generateVenuesRoute(
-      jsonRequest({ region: "강남", partySize: 8, budgetPerPerson: 30000 }),
+      jsonRequest({ regions: ["강남"], partySize: 8, budgetPerPerson: 30000 }),
     );
     const body = await res.json();
     expect(body.jobId).toBe(existing.id);
   });
 
-  it("지원하지 않는 지역 → 400", async () => {
+  it("지역을 하나도 입력하지 않으면 400", async () => {
     const res = await generateVenuesRoute(
-      jsonRequest({ region: "존재하지않는지역", partySize: 8, budgetPerPerson: 30000 }),
+      jsonRequest({ regions: [], partySize: 8, budgetPerPerson: 30000 }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("지역이 5개를 초과하면 400", async () => {
+    const res = await generateVenuesRoute(
+      jsonRequest({
+        regions: ["강남", "홍대", "동탄역", "판교역", "수원역", "여의도"],
+        partySize: 8,
+        budgetPerPerson: 30000,
+      }),
     );
     expect(res.status).toBe(400);
   });
 
   it("partySize 누락 → 400", async () => {
-    const res = await generateVenuesRoute(jsonRequest({ region: "강남", budgetPerPerson: 30000 }));
+    const res = await generateVenuesRoute(jsonRequest({ regions: ["강남"], budgetPerPerson: 30000 }));
     expect(res.status).toBe(400);
   });
 });

@@ -12,7 +12,7 @@ export async function GET(_request: Request, context: RouteContext) {
   return Response.json({
     jobId: job.id,
     status: job.status,
-    region: job.region,
+    regions: job.regions,
     partySize: job.partySize,
     budgetPerPerson: job.budgetPerPerson,
     result: job.result,

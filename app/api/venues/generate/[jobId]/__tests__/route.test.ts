@@ -20,7 +20,7 @@ beforeEach(() => {
 
 describe("/api/venues/generate/[jobId]", () => {
   it("완료된 job을 조회하면 200과 result가 담긴 응답이 온다", async () => {
-    const job = store.create("강남", 8, 30000);
+    const job = store.create(["강남"], 8, 30000);
     store.markDone(job.id, []);
 
     const res = await getGenerationJob(new Request("http://localhost"), jobRequest(job.id));
@@ -28,10 +28,11 @@ describe("/api/venues/generate/[jobId]", () => {
     const body = await res.json();
     expect(body.status).toBe("done");
     expect(body.result).toEqual([]);
+    expect(body.regions).toEqual(["강남"]);
   });
 
   it("실패한 job을 조회하면 error 메시지가 담긴다", async () => {
-    const job = store.create("강남", 8, 30000);
+    const job = store.create(["강남"], 8, 30000);
     store.markError(job.id, "추천 생성에 실패했습니다");
 
     const res = await getGenerationJob(new Request("http://localhost"), jobRequest(job.id));

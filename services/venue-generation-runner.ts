@@ -8,26 +8,26 @@ import { getVenueJobStore, type VenueGenerationJob } from "@/services/venue-job-
  * ③ 둘 다 없으면 새 job을 만들고 fire-and-forget으로 백그라운드 생성을 시작한다
  */
 export function startGeneration(
-  region: string,
+  regions: string[],
   partySize: number,
   budgetPerPerson: number,
 ): VenueGenerationJob {
   const store = getVenueJobStore();
 
-  const cached = store.findFresh(region, partySize, budgetPerPerson);
+  const cached = store.findFresh(regions, partySize, budgetPerPerson);
   if (cached) return cached;
 
-  const active = store.findActive(region, partySize, budgetPerPerson);
+  const active = store.findActive(regions, partySize, budgetPerPerson);
   if (active) return active;
 
-  const job = store.create(region, partySize, budgetPerPerson);
+  const job = store.create(regions, partySize, budgetPerPerson);
 
   // fire-and-forget — 상시 구동 노드 서버라 요청이 끝나도 계속 실행된다.
   // 어떤 실패도 서버를 죽이지 않도록 IIFE 내부 try/catch + 외부 .catch로 이중 방어.
   void (async () => {
     store.markRunning(job.id);
     try {
-      const { results, usage } = await generateVenues(region, partySize, budgetPerPerson);
+      const { results, usage } = await generateVenues(regions, partySize, budgetPerPerson);
       store.markDone(job.id, results, usage);
     } catch (error) {
       console.error("[venue-generation] 실패:", error);

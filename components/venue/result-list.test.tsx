@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { ResultList } from "@/components/venue/result-list";
 import { shareVenues } from "@/lib/venue-share";
-import type { RankedVenue } from "@/types/recommendation";
+import type { RankedVenue, RegionRecommendation } from "@/types/recommendation";
 import type { VoteSummary } from "@/types/vote";
 
 vi.mock("sonner", () => ({
@@ -30,33 +30,45 @@ function makeVenue(id: string, price: number, overrides: Partial<RankedVenue["ve
     reviewCount: 100,
     viewCount: 1000,
     pricePerPerson: price,
+    walkingMinutes: null,
     ...overrides,
   };
 }
 
-const fiveResults: RankedVenue[] = [
-  { venue: makeVenue("a", 28000), withinBudget: true },
-  { venue: makeVenue("b", 29500), withinBudget: true },
-  { venue: makeVenue("c", 27000), withinBudget: true },
-  { venue: makeVenue("d", 42000), withinBudget: false },
-  { venue: makeVenue("e", 22000), withinBudget: true },
+const oneRegionResults: RegionRecommendation[] = [
+  {
+    region: "강남역",
+    courseOne: [
+      { venue: makeVenue("a", 28000), withinBudget: true },
+      { venue: makeVenue("b", 29500), withinBudget: true },
+      { venue: makeVenue("c", 27000), withinBudget: true },
+    ],
+    courseTwo: [
+      { venue: makeVenue("d", 42000, { category: "이자카야" }), withinBudget: false },
+      { venue: makeVenue("e", 22000, { category: "호프" }), withinBudget: true },
+    ],
+  },
 ];
+
+function allVenues(results: RegionRecommendation[]) {
+  return results.flatMap((r) => [...r.courseOne, ...r.courseTwo]);
+}
 
 function renderList(
   overrides: Partial<{
-    results: RankedVenue[];
+    results: RegionRecommendation[];
     votes: VoteSummary[];
-    region: string;
+    regions: string[];
     partySize: number;
     budgetPerPerson: number;
   }> = {},
 ) {
   return render(
     <ResultList
-      region={overrides.region ?? "강남역"}
+      regions={overrides.regions ?? ["강남역"]}
       partySize={overrides.partySize ?? 8}
       budgetPerPerson={overrides.budgetPerPerson ?? 30000}
-      results={overrides.results ?? fiveResults}
+      results={overrides.results ?? oneRegionResults}
       votes={overrides.votes ?? []}
     />,
   );
@@ -83,24 +95,43 @@ describe("ResultList", () => {
     await user.click(checkboxes[1]);
     await user.click(screen.getByRole("button", { name: "선택 저장" }));
 
+    const [a, b] = allVenues(oneRegionResults);
     expect(fetch).toHaveBeenCalledWith(
       "/api/saved",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ venues: [fiveResults[0].venue, fiveResults[1].venue] }),
+        body: JSON.stringify({ venues: [a.venue, b.venue] }),
       }),
     );
     expect(toast.success).toHaveBeenCalledWith("2곳을 저장했어요");
   });
 
-  it("카드가 결과 개수만큼 렌더된다", () => {
+  it("1차·2차 섹션에 각 카테고리 결과 개수만큼 카드가 렌더된다", () => {
     renderList();
+    expect(screen.getByText("1차 · 식사")).toBeInTheDocument();
+    expect(screen.getByText("2차 · 가볍게 한잔")).toBeInTheDocument();
     expect(screen.getAllByRole("checkbox")).toHaveLength(5);
   });
 
+  it("지역별로 지역명 헤더가 표시된다", () => {
+    const twoRegions: RegionRecommendation[] = [
+      oneRegionResults[0],
+      { region: "홍대", courseOne: [{ venue: makeVenue("f", 20000, { region: "홍대" }), withinBudget: true }], courseTwo: [] },
+    ];
+    renderList({ regions: ["강남역", "홍대"], results: twoRegions });
+    expect(screen.getByRole("heading", { name: "강남역" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "홍대" })).toBeInTheDocument();
+  });
+
   it("예산 이내 후보가 0곳이면 안내 배너가 나타난다", () => {
-    const overOnly: RankedVenue[] = fiveResults.map((r) => ({ ...r, withinBudget: false }));
-    renderList({ region: "판교역", partySize: 6, budgetPerPerson: 15000, results: overOnly });
+    const overOnly: RegionRecommendation[] = [
+      {
+        region: "판교역",
+        courseOne: oneRegionResults[0].courseOne.map((r) => ({ ...r, withinBudget: false })),
+        courseTwo: oneRegionResults[0].courseTwo.map((r) => ({ ...r, withinBudget: false })),
+      },
+    ];
+    renderList({ regions: ["판교역"], partySize: 6, budgetPerPerson: 15000, results: overOnly });
     expect(
       screen.getByText("예산에 맞는 장소가 없어 가까운 순으로 보여드려요"),
     ).toBeInTheDocument();
@@ -119,7 +150,7 @@ describe("ResultList", () => {
     renderList();
     await user.click(screen.getByRole("button", { name: "카톡 공유" }));
 
-    expect(shareVenues).toHaveBeenCalledWith(fiveResults);
+    expect(shareVenues).toHaveBeenCalledWith(oneRegionResults);
     expect(toast.success).toHaveBeenCalledWith("클립보드에 복사했어요");
   });
 
@@ -156,7 +187,8 @@ describe("ResultList", () => {
     await user.click(checkboxes[2]);
     await user.click(screen.getByRole("button", { name: "투표 만들기" }));
 
-    const expectedVenues = JSON.stringify([fiveResults[0].venue, fiveResults[2].venue]);
+    const [a, , c] = allVenues(oneRegionResults);
+    const expectedVenues = JSON.stringify([a.venue, c.venue]);
     expect(pushMock).toHaveBeenCalledWith(`/vote/new?venues=${encodeURIComponent(expectedVenues)}`);
   });
 

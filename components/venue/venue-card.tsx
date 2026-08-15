@@ -53,6 +53,7 @@ export function VenueCard({ venue, withinBudget, checked, onCheckedChange }: Ven
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             {venue.category} · {venue.region}
+            {venue.walkingMinutes != null && ` · 도보 ${venue.walkingMinutes}분`}
           </div>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
             {!withinBudget && <span>★ {venue.rating}</span>}

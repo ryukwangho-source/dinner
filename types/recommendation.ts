@@ -9,6 +9,8 @@ export interface Venue {
   reviewCount: number;
   viewCount: number;
   pricePerPerson: number;
+  /** 요청한 지역(역·랜드마크)에서 도보 예상 시간(분). 조사로 못 찾으면 null */
+  walkingMinutes: number | null;
 }
 
 /**
@@ -25,10 +27,11 @@ export const venueSchema = z.object({
   reviewCount: z.number(),
   viewCount: z.number(),
   pricePerPerson: z.number(),
+  walkingMinutes: z.number().nullable(),
 }) satisfies z.ZodType<Venue>;
 
 export interface RecommendationQuery {
-  region: string;
+  regions: string[];
   partySize: number;
   budgetPerPerson: number;
 }
@@ -36,4 +39,11 @@ export interface RecommendationQuery {
 export interface RankedVenue {
   venue: Venue;
   withinBudget: boolean;
+}
+
+/** 지역 하나에 대한 1차(식사)·2차(간단한 술) 추천 — 각각 별도 목록 */
+export interface RegionRecommendation {
+  region: string;
+  courseOne: RankedVenue[];
+  courseTwo: RankedVenue[];
 }

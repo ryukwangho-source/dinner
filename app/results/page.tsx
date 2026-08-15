@@ -1,20 +1,24 @@
 import { redirect } from "next/navigation";
 import { VenueResultsFlow } from "@/components/venue/venue-results-flow";
-import { REGIONS } from "@/config/venues";
+import { MAX_REGIONS } from "@/config/venue-generation";
 import { getVoteStore } from "@/services/vote-store";
 
 type Props = {
-  searchParams: Promise<{ region?: string; people?: string; budget?: string }>;
+  searchParams: Promise<{ regions?: string; people?: string; budget?: string }>;
 };
 
 export default async function ResultsPage({ searchParams }: Props) {
-  const { region, people, budget } = await searchParams;
+  const { regions: regionsParam, people, budget } = await searchParams;
+  const regions = (regionsParam ?? "")
+    .split(",")
+    .map((r) => r.trim())
+    .filter(Boolean);
   const partySize = Number(people);
   const budgetPerPerson = Number(budget);
 
   const isValid =
-    !!region &&
-    REGIONS.includes(region) &&
+    regions.length > 0 &&
+    regions.length <= MAX_REGIONS &&
     Number.isInteger(partySize) &&
     partySize > 0 &&
     Number.isFinite(budgetPerPerson) &&
@@ -28,7 +32,7 @@ export default async function ResultsPage({ searchParams }: Props) {
 
   return (
     <VenueResultsFlow
-      region={region}
+      regions={regions}
       partySize={partySize}
       budgetPerPerson={budgetPerPerson}
       votes={votes}

@@ -3,22 +3,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GenerationStatus } from "@/components/venue/generation-status";
 import { ResultList } from "@/components/venue/result-list";
-import type { RankedVenue } from "@/types/recommendation";
+import type { RegionRecommendation } from "@/types/recommendation";
 import type { VoteSummary } from "@/types/vote";
 
-type Phase = { kind: "loading" } | { kind: "error" } | { kind: "done"; results: RankedVenue[] };
+type Phase =
+  | { kind: "loading" }
+  | { kind: "error" }
+  | { kind: "done"; results: RegionRecommendation[] };
 
 const POLL_MS = 3000;
 
 export interface VenueResultsFlowProps {
-  region: string;
+  regions: string[];
   partySize: number;
   budgetPerPerson: number;
   votes: VoteSummary[];
 }
 
 /** 결과 화면 흐름: 생성 시작 → 폴링(로딩) → 완료/실패. 화면 이탈·새로고침 후 재진입해도 서버의 기존 job을 그대로 이어 폴링한다. */
-export function VenueResultsFlow({ region, partySize, budgetPerPerson, votes }: VenueResultsFlowProps) {
+export function VenueResultsFlow({ regions, partySize, budgetPerPerson, votes }: VenueResultsFlowProps) {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,7 +59,7 @@ export function VenueResultsFlow({ region, partySize, budgetPerPerson, votes }: 
         const res = await fetch("/api/venues/generate", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ region, partySize, budgetPerPerson }),
+          body: JSON.stringify({ regions, partySize, budgetPerPerson }),
         });
         if (!res.ok) throw new Error(`generate failed: ${res.status}`);
         const { jobId } = await res.json();
@@ -65,7 +68,7 @@ export function VenueResultsFlow({ region, partySize, budgetPerPerson, votes }: 
         setPhase({ kind: "error" });
       }
     },
-    [region, partySize, budgetPerPerson, poll],
+    [regions, partySize, budgetPerPerson, poll],
   );
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export function VenueResultsFlow({ region, partySize, budgetPerPerson, votes }: 
     case "done":
       return (
         <ResultList
-          region={region}
+          regions={regions}
           partySize={partySize}
           budgetPerPerson={budgetPerPerson}
           results={phase.results}

@@ -1,5 +1,7 @@
+import { MAX_REGIONS } from "@/config/venue-generation";
+
 export interface RecommendationFormInput {
-  region: string;
+  regions: string[];
   partySize: string;
   budgetPerPerson: string;
 }
@@ -27,8 +29,10 @@ export function validateRecommendationInput(
 ): RecommendationFormErrors {
   const errors: RecommendationFormErrors = {};
 
-  if (!input.region.trim()) {
+  if (input.regions.length === 0) {
     errors.region = REQUIRED_MESSAGE;
+  } else if (input.regions.length > MAX_REGIONS) {
+    errors.region = `지역은 최대 ${MAX_REGIONS}곳까지 입력할 수 있어요`;
   }
   if (!isPositiveInteger(input.partySize)) {
     errors.partySize = REQUIRED_MESSAGE;
