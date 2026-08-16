@@ -3,11 +3,11 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import {
-  CANDIDATE_PAIR_COUNT,
+  ALLOWED_CATEGORIES,
+  CANDIDATE_COUNT,
   COURSE_ONE_CATEGORIES,
   COURSE_TWO_CATEGORIES,
   GENERATION_MODEL,
-  MAX_PAIR_WALKING_MINUTES,
   MAX_WALKING_MINUTES,
   RATING_MIN,
   RELAXED_REVIEW_MIN,
@@ -16,52 +16,49 @@ import {
   WEB_SEARCH_MAX_USES,
 } from "@/config/venue-generation";
 import { getAnthropic } from "@/lib/anthropic";
-import { type RawVenuePair, rankVenuePairs } from "@/lib/venue-ranking";
+import { rankVenueCandidates } from "@/lib/venue-ranking";
 import { venueGenerationFixture } from "@/services/fixtures/venue-generation-fixture";
 import type { GenerationUsage } from "@/types/generation-usage";
 import type { RegionRecommendation, Venue } from "@/types/recommendation";
 
-const generatedVenueRoleSchema = z.object({
+const TOP_N = 5;
+
+const generatedVenueSchema = z.object({
   name: z.string(),
   category: z.string(),
   rating: z.coerce.number(),
   reviewCount: z.coerce.number(),
   pricePerPerson: z.coerce.number(),
+  walkingMinutes: z.coerce.number().nullable().optional(),
 });
+type GeneratedVenue = z.infer<typeof generatedVenueSchema>;
 
-/** 1차 장소만 지역 기준점에서의 도보 시간을 추가로 담는다 (2차 거리는 1차와의 거리로 근사한다) */
-const generatedPairSchema = z.object({
-  courseOne: generatedVenueRoleSchema.extend({
-    walkingMinutes: z.coerce.number().nullable().optional(),
-  }),
-  courseTwo: generatedVenueRoleSchema,
-  walkingBetweenMinutes: z.coerce.number(),
-});
-type GeneratedPair = z.infer<typeof generatedPairSchema>;
-
-const generatedPairsSchema = z.object({
-  pairs: z.array(generatedPairSchema),
+const generatedVenuesSchema = z.object({
+  venues: z.array(generatedVenueSchema),
 });
 
 function researchPrompt(region: string, partySize: number): string {
-  return `당신은 회식 코스 리서처다. 웹검색으로 "${region}" 지역에서 회식하기 좋은 1차(식사)+2차(간단한 술) 조합을 조사하라.
+  return `당신은 회식 장소 리서처다. 웹검색으로 "${region}" 지역의 회식하기 좋은 실제 장소를 조사하라.
 
 - 지역(기준점): ${region}
 - 인원: ${partySize}명
-- 1차 업종: ${COURSE_ONE_CATEGORIES.join("·")} 중 하나. "${region}"에서 도보 ${MAX_WALKING_MINUTES}분 이내여야 한다. 도보 시간을 확인할 수 없는 곳은 후보에서 뺀다.
-- 2차 업종: ${COURSE_TWO_CATEGORIES.join("·")} 중 하나. 그 1차 장소에서 도보 ${MAX_PAIR_WALKING_MINUTES}분 이내인 곳을 우선 찾되, 정 없으면 그 1차에서 가장 가까운 곳이라도 반드시 짝지어 포함한다.
-- 조합(페어) ${CANDIDATE_PAIR_COUNT}개를 조사한다(비용 절감을 위해 딱 필요한 만큼만). 카페·디저트카페·편의점 등 회식과 무관한 곳은 제외한다.
+- 거리 제한: "${region}"에서 도보 ${MAX_WALKING_MINUTES}분 이내인 곳만 조사한다. 도보 시간을 확인할 수 없는 곳은 아예 후보에서 뺀다.
+- 1차(식사 위주) 업종: ${COURSE_ONE_CATEGORIES.join("·")} — 이 중에서 최소 7곳
+- 2차(1차 이후 갈 만한 간단한 술자리) 업종: ${COURSE_TWO_CATEGORIES.join("·")} — 이 중에서 최소 5곳
+- 총 조사 대상(비용 절감을 위해 딱 필요한 만큼만): ${CANDIDATE_COUNT}곳. 그 이상은 조사하지 않는다. 카페·디저트카페·편의점 등 회식과 무관한 곳은 제외한다.
 - 검색은 필요한 만큼만 — 같은 정보를 여러 번 다시 찾지 말고, 한 번에 여러 후보를 확인할 수 있으면 한 번에 확인하라.
 
-각 조합(페어)마다 조사할 것:
-1. 1차 장소: 정확한 이름, 업종, 평점(5점 만점 환산)과 리뷰 수(실제 검색·페이지 확인 수치 우선 — 500·1000 같은 임의 반올림 금지, 정확한 값을 못 찾으면 신뢰할 만한 근사치라도 채운다), 1인 예상 비용(원화), "${region}"에서 도보 예상 시간(분, 도저히 알 수 없으면 null)
-2. 2차 장소: 정확한 이름, 업종, 평점, 리뷰 수, 1인 예상 비용(원화)
-3. 1차와 2차 사이 도보 예상 시간(분) — 지도상 대략적인 도보 거리로 추정
+각 장소마다 조사할 것:
+1. 정확한 이름
+2. 업종 (위 목록 중 하나)
+3. 평점(5점 만점 환산)과 리뷰 수 — 실제 검색·페이지 확인 수치를 우선한다(500·1000 같은 임의 반올림 금지). 정확한 값을 못 찾으면 신뢰할 만한 근사치라도 채운다
+4. 1인 예상 비용(원화, 식사+음주 포함 대략치)
+5. "${region}"에서 도보 예상 시간(분) — 지도상 대략적인 도보 거리로 추정. 도저히 알 수 없으면 null
 
-우선순위: 1차·2차 모두 평점 ${RATING_MIN} 이상, 리뷰 ${REVIEW_MIN}개 이상인 곳 위주로 조사하되, 부족하면 리뷰 ${RELAXED_REVIEW_MIN}개 이상까지 포함해도 좋다.`;
+우선순위: 평점 ${RATING_MIN} 이상, 리뷰 ${REVIEW_MIN}개 이상인 곳 위주로 조사하되, 부족하면 리뷰 ${RELAXED_REVIEW_MIN}개 이상까지 포함해도 좋다.`;
 }
 
-const META_JSON_SHAPE = `{ "pairs": [ { "courseOne": { "name": string, "category": string, "rating": number, "reviewCount": number, "pricePerPerson": number, "walkingMinutes": number | null }, "courseTwo": { "name": string, "category": string, "rating": number, "reviewCount": number, "pricePerPerson": number }, "walkingBetweenMinutes": number } ] }`;
+const META_JSON_SHAPE = `{ "venues": [ { "name": string, "category": string, "rating": number, "reviewCount": number, "pricePerPerson": number, "walkingMinutes": number | null } ] }`;
 
 /** 흔한 LLM JSON 오류(트레일링 콤마·// 주석)를 관대하게 정리 */
 function looseJsonClean(s: string): string {
@@ -79,8 +76,8 @@ function jsonCandidates(text: string): string[] {
   return out;
 }
 
-/** Agent 응답 텍스트에서 페어(1차+2차) 목록 JSON을 추출·검증한다 (관대한 파싱) */
-export function parsePairsFromText(text: string): GeneratedPair[] {
+/** Agent 응답 텍스트에서 후보 목록 JSON을 추출·검증한다 (관대한 파싱) */
+export function parseVenuesFromText(text: string): GeneratedVenue[] {
   for (const candidate of jsonCandidates(text)) {
     for (const raw of [candidate, looseJsonClean(candidate)]) {
       let json: unknown;
@@ -89,54 +86,49 @@ export function parsePairsFromText(text: string): GeneratedPair[] {
       } catch {
         continue;
       }
-      const parsed = generatedPairsSchema.safeParse(json);
-      if (parsed.success) return parsed.data.pairs;
+      const parsed = generatedVenuesSchema.safeParse(json);
+      if (parsed.success) return parsed.data.venues;
     }
   }
   throw new Error("생성 결과 JSON 파싱에 실패했습니다");
 }
 
-function toVenue(
-  raw: GeneratedPair["courseOne"] | GeneratedPair["courseTwo"],
-  region: string,
-  walkingMinutes: number | null,
-): Venue {
-  return {
-    id: randomUUID(),
-    name: raw.name,
-    category: raw.category,
-    region,
-    rating: raw.rating,
-    reviewCount: raw.reviewCount,
-    viewCount: Math.round(raw.reviewCount * 8),
-    pricePerPerson: raw.pricePerPerson,
-    walkingMinutes,
-  };
+/**
+ * 업종 화이트리스트·품질 문턱으로 필터링해 Venue 형태로 변환한다.
+ * 조회수는 웹검색으로 신뢰성 있게 구할 수 없어 리뷰수 기반 근사치를 쓴다
+ * (rankVenueCandidates의 3순위 tie-break라 순위에 미치는 영향이 작다).
+ */
+export function toVenues(raw: GeneratedVenue[], region: string): Venue[] {
+  const allowed = new Set<string>(ALLOWED_CATEGORIES);
+  return raw
+    .filter((v) => allowed.has(v.category))
+    .filter((v) => v.rating >= RATING_MIN && v.reviewCount >= RELAXED_REVIEW_MIN)
+    .map((v) => ({
+      id: randomUUID(),
+      name: v.name,
+      category: v.category,
+      region,
+      rating: v.rating,
+      reviewCount: v.reviewCount,
+      viewCount: Math.round(v.reviewCount * 8),
+      pricePerPerson: v.pricePerPerson,
+      walkingMinutes: v.walkingMinutes ?? null,
+    }));
 }
 
-/**
- * 업종 화이트리스트·품질 문턱·지역 도보 거리로 페어를 필터링해 RawVenuePair로 변환한다.
- * 2차의 지역-거리는 따로 조사하지 않으므로 1차 거리 + 1차·2차 사이 거리로 근사한다.
- * 조회수는 웹검색으로 신뢰성 있게 구할 수 없어 리뷰수 기반 근사치를 쓴다.
- */
-export function toVenuePairs(raw: GeneratedPair[], region: string): RawVenuePair[] {
+/** 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 후보만 남긴다. 도보 시간을 모르면(null) 제외한다 */
+export function filterWithinWalkingDistance(venues: Venue[]): Venue[] {
+  return venues.filter((v) => v.walkingMinutes !== null && v.walkingMinutes <= MAX_WALKING_MINUTES);
+}
+
+/** 업종으로 1차(식사)·2차(술) 후보를 나눈다 */
+export function splitByCourse(venues: Venue[]): { courseOne: Venue[]; courseTwo: Venue[] } {
   const courseOneSet = new Set<string>(COURSE_ONE_CATEGORIES);
   const courseTwoSet = new Set<string>(COURSE_TWO_CATEGORIES);
-  const passesQuality = (v: GeneratedPair["courseOne"] | GeneratedPair["courseTwo"]) =>
-    v.rating >= RATING_MIN && v.reviewCount >= RELAXED_REVIEW_MIN;
-
-  return raw
-    .filter((p) => courseOneSet.has(p.courseOne.category) && courseTwoSet.has(p.courseTwo.category))
-    .filter((p) => passesQuality(p.courseOne) && passesQuality(p.courseTwo))
-    .filter(
-      (p): p is GeneratedPair & { courseOne: { walkingMinutes: number } } =>
-        p.courseOne.walkingMinutes != null && p.courseOne.walkingMinutes <= MAX_WALKING_MINUTES,
-    )
-    .map((p) => ({
-      courseOne: toVenue(p.courseOne, region, p.courseOne.walkingMinutes),
-      courseTwo: toVenue(p.courseTwo, region, p.courseOne.walkingMinutes + p.walkingBetweenMinutes),
-      walkingBetweenMinutes: p.walkingBetweenMinutes,
-    }));
+  return {
+    courseOne: venues.filter((v) => courseOneSet.has(v.category)),
+    courseTwo: venues.filter((v) => courseTwoSet.has(v.category)),
+  };
 }
 
 // ── 직접 API 경로 (ANTHROPIC_API_KEY 있을 때 — web_search tool로 검색 횟수 상한 강제) ──
@@ -173,7 +165,7 @@ async function runResearch(
   partySize: number,
 ): Promise<{ research: string; usages: RawUsage[] }> {
   const messages: Anthropic.MessageParam[] = [
-    { role: "user", content: `${researchPrompt(region, partySize)}\n\n검색을 마치면 조사한 조합을 정리해 출력하라.` },
+    { role: "user", content: `${researchPrompt(region, partySize)}\n\n검색을 마치면 조사한 장소를 정리해 출력하라.` },
   ];
   let research = "";
   const usages: RawUsage[] = [];
@@ -202,15 +194,15 @@ async function runResearch(
 async function extractVenues(
   client: Anthropic,
   research: string,
-): Promise<{ pairs: GeneratedPair[]; usage: RawUsage }> {
+): Promise<{ venues: GeneratedVenue[]; usage: RawUsage }> {
   const response = await client.messages.parse({
     model: GENERATION_MODEL,
     max_tokens: 8000,
-    messages: [{ role: "user", content: `다음은 회식 코스(1차+2차) 조사 결과다. 스키마에 맞게 정규화하라.\n\n${research}` }],
-    output_config: { format: zodOutputFormat(generatedPairsSchema), effort: "low" },
+    messages: [{ role: "user", content: `다음은 회식 장소 조사 결과다. 스키마에 맞게 정규화하라.\n\n${research}` }],
+    output_config: { format: zodOutputFormat(generatedVenuesSchema), effort: "low" },
   });
   if (!response.parsed_output) throw new Error("조사 결과 정규화에 실패했습니다");
-  return { pairs: response.parsed_output.pairs, usage: response.usage };
+  return { venues: response.parsed_output.venues, usage: response.usage };
 }
 
 // ── Agent SDK 경로 (ANTHROPIC_API_KEY 없을 때 — 구독 인증 폴백) ──
@@ -218,7 +210,7 @@ async function extractVenues(
 async function runAgentGeneration(
   region: string,
   partySize: number,
-): Promise<{ pairs: GeneratedPair[]; usage: GenerationUsage | null }> {
+): Promise<{ venues: GeneratedVenue[]; usage: GenerationUsage | null }> {
   const { query } = await import("@anthropic-ai/claude-agent-sdk");
   const prompt = `${researchPrompt(region, partySize)}
 
@@ -262,27 +254,27 @@ ${META_JSON_SHAPE}`;
     }
   }
   if (!resultText.trim()) throw new Error("회식 장소 조사에 실패했습니다");
-  return { pairs: parsePairsFromText(resultText), usage };
+  return { venues: parseVenuesFromText(resultText), usage };
 }
 
-/** 지역 하나에 대해 페어(1차+2차) 후보를 모은다 (fixture / 직접 API / Agent SDK 중 하나) */
+/** 지역 하나에 대해 후보를 모은다 (fixture / 직접 API / Agent SDK 중 하나) */
 async function generateCandidatesForRegion(
   region: string,
   partySize: number,
   client?: Anthropic,
-): Promise<{ pairs: RawVenuePair[]; usage: GenerationUsage | null }> {
+): Promise<{ candidates: Venue[]; usage: GenerationUsage | null }> {
   if (process.env.GENERATE_FIXTURE === "1") {
-    return { pairs: venueGenerationFixture(region), usage: null };
+    return { candidates: venueGenerationFixture(region), usage: null };
   }
   if (!client && !process.env.ANTHROPIC_API_KEY) {
     const agentResult = await runAgentGeneration(region, partySize);
-    return { pairs: toVenuePairs(agentResult.pairs, region), usage: agentResult.usage };
+    return { candidates: toVenues(agentResult.venues, region), usage: agentResult.usage };
   }
   const api = client ?? getAnthropic();
   const { research, usages } = await runResearch(api, region, partySize);
-  const { pairs, usage: extractUsage } = await extractVenues(api, research);
+  const { venues, usage: extractUsage } = await extractVenues(api, research);
   return {
-    pairs: toVenuePairs(pairs, region),
+    candidates: toVenues(venues, region),
     usage: toGenerationUsage([...usages, extractUsage]),
   };
 }
@@ -301,8 +293,8 @@ function mergeUsage(usages: (GenerationUsage | null)[]): GenerationUsage | null 
 }
 
 /**
- * 지역마다 회식 코스를 실시간 생성해, 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인
- * 1차 장소와 그 근처(도보 {@link MAX_PAIR_WALKING_MINUTES}분 우선) 2차 장소를 묶은 페어를 반환한다.
+ * 지역마다 회식 장소를 실시간 생성해, 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 곳 중
+ * 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다.
  * ANTHROPIC_API_KEY가 있으면 직접 API(web_search tool, 검색 횟수 상한 강제 + 구조화 출력),
  * 없으면 Agent SDK(구독 인증) 경로를 쓴다.
  * GENERATE_FIXTURE=1이면 실제 웹검색 없이 고정 fixture를 쓴다(테스트·E2E 전용, 비용 회피).
@@ -315,13 +307,19 @@ export async function generateVenues(
 ): Promise<{ results: RegionRecommendation[]; usage: GenerationUsage | null }> {
   const perRegion = await Promise.all(
     regions.map(async (region) => {
-      const { pairs, usage } = await generateCandidatesForRegion(region, partySize, client);
-      return { region, pairs: rankVenuePairs(pairs, budgetPerPerson), usage };
+      const { candidates, usage } = await generateCandidatesForRegion(region, partySize, client);
+      const { courseOne, courseTwo } = splitByCourse(filterWithinWalkingDistance(candidates));
+      return {
+        region,
+        courseOne: rankVenueCandidates(courseOne, budgetPerPerson).slice(0, TOP_N),
+        courseTwo: rankVenueCandidates(courseTwo, budgetPerPerson).slice(0, TOP_N),
+        usage,
+      };
     }),
   );
 
   return {
-    results: perRegion.map(({ region, pairs }) => ({ region, pairs })),
+    results: perRegion.map(({ region, courseOne, courseTwo }) => ({ region, courseOne, courseTwo })),
     usage: mergeUsage(perRegion.map((r) => r.usage)),
   };
 }

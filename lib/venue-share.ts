@@ -3,23 +3,30 @@ import type { RegionRecommendation } from "@/types/recommendation";
 
 /**
  * 추천 결과 요약 텍스트 (카톡 등 공유용).
- * 지역별로 1차+2차 페어를 순서대로 담고, 각 장소마다 네이버 검색 링크를 함께 담는다.
+ * 지역별로 1차(식사)·2차(간단한 술) 섹션을 나눠 담고, 각 장소마다 네이버 검색 링크를 함께 담는다.
  */
 export function buildShareText(results: RegionRecommendation[]): string {
   const lines: string[] = ["📍 회식 장소 추천"];
-  for (const { region, pairs } of results) {
+  for (const { region, courseOne, courseTwo } of results) {
     lines.push("", `[${region}]`);
-    pairs.forEach(({ courseOne, courseTwo, walkingBetweenMinutes }, i) => {
-      lines.push(
-        `${i + 1}. 1차 · ${courseOne.venue.name} (1인 ${courseOne.venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
-      );
-      lines.push(naverMapSearchUrl(courseOne.venue.name, courseOne.venue.region));
-      lines.push(`   ↓ 도보 ${walkingBetweenMinutes}분`);
-      lines.push(
-        `   2차 · ${courseTwo.venue.name} (1인 ${courseTwo.venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
-      );
-      lines.push(naverMapSearchUrl(courseTwo.venue.name, courseTwo.venue.region));
-    });
+    if (courseOne.length > 0) {
+      lines.push("1차");
+      courseOne.forEach(({ venue }, i) => {
+        lines.push(
+          `${i + 1}. ${venue.name} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
+        );
+        lines.push(naverMapSearchUrl(venue.name, venue.region));
+      });
+    }
+    if (courseTwo.length > 0) {
+      lines.push("2차");
+      courseTwo.forEach(({ venue }, i) => {
+        lines.push(
+          `${i + 1}. ${venue.name} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
+        );
+        lines.push(naverMapSearchUrl(venue.name, venue.region));
+      });
+    }
   }
   return lines.join("\n");
 }

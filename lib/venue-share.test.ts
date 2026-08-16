@@ -20,46 +20,42 @@ function makeVenue(id: string, name: string, price: number, region = "강남역"
 const results: RegionRecommendation[] = [
   {
     region: "강남역",
-    pairs: [
-      {
-        courseOne: { venue: makeVenue("a", "숯불향 강남점", 28000), withinBudget: true },
-        courseTwo: { venue: makeVenue("b", "이자카야 온기", 29500), withinBudget: true },
-        walkingBetweenMinutes: 3,
-      },
-      {
-        courseOne: { venue: makeVenue("c", "모던삼겹 강남", 27000), withinBudget: true },
-        courseTwo: { venue: makeVenue("e", "호프집 강남불빛", 22000), withinBudget: true },
-        walkingBetweenMinutes: 5,
-      },
+    courseOne: [
+      { venue: makeVenue("a", "숯불향 강남점", 28000), withinBudget: true },
+      { venue: makeVenue("c", "모던삼겹 강남", 27000), withinBudget: true },
+      { venue: makeVenue("d", "오마카세 결", 42000), withinBudget: false },
+    ],
+    courseTwo: [
+      { venue: makeVenue("b", "이자카야 온기", 29500), withinBudget: true },
+      { venue: makeVenue("e", "호프집 강남불빛", 22000), withinBudget: true },
     ],
   },
 ];
 
-function allVenues(results: RegionRecommendation[]) {
-  return results.flatMap((r) => r.pairs.flatMap((p) => [p.courseOne, p.courseTwo]));
-}
-
 describe("buildShareText", () => {
   it("모든 장소 이름이 포함된다", () => {
     const text = buildShareText(results);
-    for (const { venue } of allVenues(results)) {
-      expect(text).toContain(venue.name);
+    for (const { courseOne, courseTwo } of results) {
+      for (const { venue } of [...courseOne, ...courseTwo]) {
+        expect(text).toContain(venue.name);
+      }
     }
   });
 
   it("각 장소마다 네이버 검색 링크가 함께 포함된다", () => {
     const text = buildShareText(results);
-    for (const { venue } of allVenues(results)) {
-      expect(text).toContain(naverMapSearchUrl(venue.name, venue.region));
+    for (const { courseOne, courseTwo } of results) {
+      for (const { venue } of [...courseOne, ...courseTwo]) {
+        expect(text).toContain(naverMapSearchUrl(venue.name, venue.region));
+      }
     }
   });
 
-  it("지역명과 1차·2차 구분 라벨, 도보 시간이 포함된다", () => {
+  it("지역명과 1차·2차 구분 라벨이 포함된다", () => {
     const text = buildShareText(results);
     expect(text).toContain("[강남역]");
     expect(text).toContain("1차");
     expect(text).toContain("2차");
-    expect(text).toContain("도보 3분");
   });
 });
 

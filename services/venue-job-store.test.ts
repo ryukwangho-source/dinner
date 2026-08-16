@@ -7,39 +7,23 @@ function fakeResult(): RegionRecommendation[] {
   return [
     {
       region: "강남",
-      pairs: [
+      courseOne: [
         {
-          courseOne: {
-            venue: {
-              id: "v1",
-              name: "테스트집",
-              category: "고깃집",
-              region: "강남",
-              rating: 4.5,
-              reviewCount: 100,
-              viewCount: 800,
-              pricePerPerson: 25000,
-              walkingMinutes: 5,
-            },
-            withinBudget: true,
+          venue: {
+            id: "v1",
+            name: "테스트집",
+            category: "고깃집",
+            region: "강남",
+            rating: 4.5,
+            reviewCount: 100,
+            viewCount: 800,
+            pricePerPerson: 25000,
+            walkingMinutes: 5,
           },
-          courseTwo: {
-            venue: {
-              id: "v2",
-              name: "테스트술집",
-              category: "이자카야",
-              region: "강남",
-              rating: 4.4,
-              reviewCount: 80,
-              viewCount: 640,
-              pricePerPerson: 20000,
-              walkingMinutes: 8,
-            },
-            withinBudget: true,
-          },
-          walkingBetweenMinutes: 3,
+          withinBudget: true,
         },
       ],
+      courseTwo: [],
     },
   ];
 }

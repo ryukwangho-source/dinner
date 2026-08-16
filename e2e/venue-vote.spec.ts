@@ -6,8 +6,7 @@ const VOTES_DB_PATH = path.join(process.cwd(), "data", "votes-e2e.db");
 
 test("선택없이 투표만들기 시도→안내→투표 생성→링크 접속→투표→변경 전체 흐름", async ({ page }) => {
   await page.goto("/results?regions=%EC%98%A4%EC%82%B0%EC%97%AD&people=8&budget=30000");
-  const checkboxes = page.getByRole("checkbox");
-  await expect(checkboxes.first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("1차 · 식사")).toBeVisible({ timeout: 30_000 });
 
   // 선택 없이 투표 만들기 시도 → 안내, 이동 없음
   await page.getByRole("button", { name: "투표 만들기" }).click();
@@ -15,6 +14,7 @@ test("선택없이 투표만들기 시도→안내→투표 생성→링크 접�
   await expect(page).toHaveURL(/\/results\?/);
 
   // 후보 2곳 선택 후 투표 만들기
+  const checkboxes = page.getByRole("checkbox");
   await checkboxes.nth(0).click();
   await checkboxes.nth(1).click();
   await page.getByRole("button", { name: "투표 만들기" }).click();

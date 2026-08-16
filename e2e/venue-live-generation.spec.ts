@@ -14,11 +14,13 @@ test("추천받기(GENERATE_FIXTURE) → 로딩 → 지역별 1차·2차 결과 
   // 생성 진행 중 안내가 먼저 보인다
   await expect(page.getByText("추천 장소를 찾고 있어요")).toBeVisible();
 
-  // 완료되면 자동으로 1차+2차 페어 카드로 전환된다 (첫 요청은 라우트 컴파일이 겹쳐 느릴 수 있어 여유를 둔다)
-  const cards = page.getByRole("checkbox");
-  await expect(cards.first()).toBeVisible({ timeout: 30_000 });
+  // 완료되면 자동으로 1차·2차 섹션과 카드로 전환된다 (첫 요청은 라우트 컴파일이 겹쳐 느릴 수 있어 여유를 둔다)
+  await expect(page.getByText("1차 · 식사")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("2차 · 가볍게 한잔")).toBeVisible();
   await expect(page.getByText("추천 장소를 찾고 있어요")).not.toBeVisible();
-  await expect(cards).toHaveCount(4);
+
+  const cards = page.getByRole("checkbox");
+  await expect(cards).toHaveCount(9);
 
   // 2곳 선택 후 저장
   await cards.nth(0).click();
