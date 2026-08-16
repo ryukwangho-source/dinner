@@ -36,7 +36,7 @@ export function ResultList({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
 
-  const allRanked = results.flatMap((r) => [...r.courseOne, ...r.courseTwo]);
+  const allRanked = results.flatMap((r) => r.pairs.flatMap((p) => [p.courseOne, p.courseTwo]));
   const noneWithinBudget = allRanked.length > 0 && allRanked.every((r) => !r.withinBudget);
 
   function toggle(id: string, checked: boolean) {
@@ -122,47 +122,42 @@ export function ResultList({
         </Alert>
       )}
 
-      {results.map(({ region, courseOne, courseTwo }) => (
+      {results.map(({ region, pairs }) => (
         <div key={region} className="flex flex-col gap-3">
           <h2 className="text-sm font-bold">{region}</h2>
 
-          <div className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold text-muted-foreground">1차 · 식사</h3>
-            {courseOne.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
-                {courseOne.map(({ venue, withinBudget }) => (
+          {pairs.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {pairs.map(({ courseOne, courseTwo, walkingBetweenMinutes }, i) => (
+                <div
+                  key={`${courseOne.venue.id}-${courseTwo.venue.id}`}
+                  className="flex flex-col gap-2 rounded-lg border p-3"
+                >
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {i + 1}번째 코스 · 1차→2차 도보 {walkingBetweenMinutes}분
+                  </span>
                   <VenueCard
-                    key={venue.id}
-                    venue={venue}
-                    withinBudget={withinBudget}
-                    checked={selected.has(venue.id)}
-                    onCheckedChange={(checked) => toggle(venue.id, checked)}
+                    venue={courseOne.venue}
+                    withinBudget={courseOne.withinBudget}
+                    checked={selected.has(courseOne.venue.id)}
+                    onCheckedChange={(checked) => toggle(courseOne.venue.id, checked)}
                   />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">추천할 곳을 찾지 못했어요</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold text-muted-foreground">2차 · 가볍게 한잔</h3>
-            {courseTwo.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
-                {courseTwo.map(({ venue, withinBudget }) => (
+                  <div className="flex items-center gap-2 pl-2 text-xs text-muted-foreground">
+                    <span aria-hidden>↓</span>
+                    <span>도보 {walkingBetweenMinutes}분</span>
+                  </div>
                   <VenueCard
-                    key={venue.id}
-                    venue={venue}
-                    withinBudget={withinBudget}
-                    checked={selected.has(venue.id)}
-                    onCheckedChange={(checked) => toggle(venue.id, checked)}
+                    venue={courseTwo.venue}
+                    withinBudget={courseTwo.withinBudget}
+                    checked={selected.has(courseTwo.venue.id)}
+                    onCheckedChange={(checked) => toggle(courseTwo.venue.id, checked)}
                   />
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">추천할 곳을 찾지 못했어요</p>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">추천할 곳을 찾지 못했어요</p>
+          )}
         </div>
       ))}
 

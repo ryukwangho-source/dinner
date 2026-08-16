@@ -8,8 +8,12 @@ export const RELAXED_REVIEW_MIN = 5;
 export const GENERATION_MODEL = "claude-sonnet-5";
 /** 1콜(웹 검색·종합)의 검색 횟수 상한 — 비용 절감 */
 export const WEB_SEARCH_MAX_USES = 5;
-/** 지역 하나당 1차·2차 각각 상위 5곳을 추리기 위해 넉넉히 조사할 후보 개수 */
-export const CANDIDATE_COUNT = 12;
+/** 지역 하나당 페어(1차+2차) 후보를 넉넉히 조사할 개수 */
+export const CANDIDATE_PAIR_COUNT = 6;
+/** 지역 하나당 최종적으로 보여줄 페어 개수 (1차+2차 합쳐 이 값의 2배만큼 장소가 표시된다) */
+export const PAIR_COUNT = 2;
+/** 1차·2차 사이 도보 시간 목표 상한(분) — 넘는 조합도 후보에서 빼지 않고, 가장 가까운 조합을 그대로 페어링한다 */
+export const MAX_PAIR_WALKING_MINUTES = 5;
 
 /** 자유 텍스트로 한 번에 입력 가능한 지역 개수 상한 (비용·시간 제한) */
 export const MAX_REGIONS = 5;

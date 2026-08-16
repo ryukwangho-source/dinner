@@ -16,9 +16,9 @@ test("입력 오류→재제출→추천→선택 저장→저장 목록 확인�
   await page.getByRole("button", { name: "추천받기" }).click();
 
   await expect(page).toHaveURL(/\/results\?/);
-  await expect(page.getByText("1차 · 식사")).toBeVisible({ timeout: 30_000 });
   const cards = page.getByRole("checkbox");
-  await expect(cards).toHaveCount(9);
+  await expect(cards.first()).toBeVisible({ timeout: 30_000 });
+  await expect(cards).toHaveCount(4);
 
   // 2곳 선택 후 저장
   await cards.nth(0).click();

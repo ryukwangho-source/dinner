@@ -41,9 +41,16 @@ export interface RankedVenue {
   withinBudget: boolean;
 }
 
-/** 지역 하나에 대한 1차(식사)·2차(간단한 술) 추천 — 각각 별도 목록 */
+/** 1차(식사) 장소와 도보로 이어 갈 수 있는 근처 2차(간단한 술) 장소를 묶은 한 쌍 */
+export interface VenuePair {
+  courseOne: RankedVenue;
+  courseTwo: RankedVenue;
+  /** 1차·2차 사이 도보 예상 시간(분) */
+  walkingBetweenMinutes: number;
+}
+
+/** 지역 하나에 대한 추천 — 1차+2차를 묶은 페어 목록 */
 export interface RegionRecommendation {
   region: string;
-  courseOne: RankedVenue[];
-  courseTwo: RankedVenue[];
+  pairs: VenuePair[];
 }

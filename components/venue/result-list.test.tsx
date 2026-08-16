@@ -38,20 +38,23 @@ function makeVenue(id: string, price: number, overrides: Partial<RankedVenue["ve
 const oneRegionResults: RegionRecommendation[] = [
   {
     region: "강남역",
-    courseOne: [
-      { venue: makeVenue("a", 28000), withinBudget: true },
-      { venue: makeVenue("b", 29500), withinBudget: true },
-      { venue: makeVenue("c", 27000), withinBudget: true },
-    ],
-    courseTwo: [
-      { venue: makeVenue("d", 42000, { category: "이자카야" }), withinBudget: false },
-      { venue: makeVenue("e", 22000, { category: "호프" }), withinBudget: true },
+    pairs: [
+      {
+        courseOne: { venue: makeVenue("a", 28000), withinBudget: true },
+        courseTwo: { venue: makeVenue("d", 22000, { category: "이자카야" }), withinBudget: true },
+        walkingBetweenMinutes: 3,
+      },
+      {
+        courseOne: { venue: makeVenue("c", 27000), withinBudget: true },
+        courseTwo: { venue: makeVenue("e", 42000, { category: "호프" }), withinBudget: false },
+        walkingBetweenMinutes: 4,
+      },
     ],
   },
 ];
 
 function allVenues(results: RegionRecommendation[]) {
-  return results.flatMap((r) => [...r.courseOne, ...r.courseTwo]);
+  return results.flatMap((r) => r.pairs.flatMap((p) => [p.courseOne, p.courseTwo]));
 }
 
 function renderList(
@@ -110,17 +113,26 @@ describe("ResultList", () => {
     expect(toast.success).toHaveBeenCalledWith("2곳을 저장했어요");
   });
 
-  it("1차·2차 섹션에 각 카테고리 결과 개수만큼 카드가 렌더된다", () => {
+  it("페어마다 1차·2차 카드가 도보 시간 표시와 함께 렌더된다", () => {
     renderList();
-    expect(screen.getByText("1차 · 식사")).toBeInTheDocument();
-    expect(screen.getByText("2차 · 가볍게 한잔")).toBeInTheDocument();
-    expect(screen.getAllByRole("checkbox")).toHaveLength(5);
+    expect(screen.getByText(/1번째 코스 · 1차→2차 도보 3분/)).toBeInTheDocument();
+    expect(screen.getByText(/2번째 코스 · 1차→2차 도보 4분/)).toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
   });
 
   it("지역별로 지역명 헤더가 표시된다", () => {
     const twoRegions: RegionRecommendation[] = [
       oneRegionResults[0],
-      { region: "홍대", courseOne: [{ venue: makeVenue("f", 20000, { region: "홍대" }), withinBudget: true }], courseTwo: [] },
+      {
+        region: "홍대",
+        pairs: [
+          {
+            courseOne: { venue: makeVenue("f", 20000, { region: "홍대" }), withinBudget: true },
+            courseTwo: { venue: makeVenue("g", 18000, { region: "홍대", category: "호프" }), withinBudget: true },
+            walkingBetweenMinutes: 2,
+          },
+        ],
+      },
     ];
     renderList({ regions: ["강남역", "홍대"], results: twoRegions });
     expect(screen.getByRole("heading", { name: "강남역" })).toBeInTheDocument();
@@ -131,8 +143,11 @@ describe("ResultList", () => {
     const overOnly: RegionRecommendation[] = [
       {
         region: "판교역",
-        courseOne: oneRegionResults[0].courseOne.map((r) => ({ ...r, withinBudget: false })),
-        courseTwo: oneRegionResults[0].courseTwo.map((r) => ({ ...r, withinBudget: false })),
+        pairs: oneRegionResults[0].pairs.map((p) => ({
+          ...p,
+          courseOne: { ...p.courseOne, withinBudget: false },
+          courseTwo: { ...p.courseTwo, withinBudget: false },
+        })),
       },
     ];
     renderList({ regions: ["판교역"], partySize: 6, budgetPerPerson: 15000, results: overOnly });
@@ -209,7 +224,7 @@ describe("ResultList", () => {
     renderList();
     await user.click(screen.getByRole("button", { name: "전체 선택" }));
 
-    expect(screen.getByText("5곳 선택됨")).toBeInTheDocument();
+    expect(screen.getByText("4곳 선택됨")).toBeInTheDocument();
     for (const checkbox of screen.getAllByRole("checkbox")) {
       expect(checkbox).toBeChecked();
     }
