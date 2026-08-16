@@ -5,15 +5,29 @@ import { VenueResultsFlow } from "@/components/venue/venue-results-flow";
 import type { VoteSummary } from "@/types/vote";
 
 vi.mock("@/components/venue/result-list", () => ({
-  ResultList: ({ regions }: { regions: string[] }) => (
-    <div data-testid="result-list">결과: {regions.join(",")}</div>
+  ResultList: ({
+    regions,
+    usage,
+    durationMs,
+  }: {
+    regions: string[];
+    usage: { inputTokens: number } | null;
+    durationMs: number | null;
+  }) => (
+    <div data-testid="result-list">
+      결과: {regions.join(",")} · usage:{usage ? usage.inputTokens : "none"} · durationMs:
+      {durationMs ?? "none"}
+    </div>
   ),
 }));
 
 const votes: VoteSummary[] = [];
 
 /** POST는 항상 pending job을, GET은 state.status를 반영한 폴링 응답을 준다. */
-function mockServer(initialStatus: "pending" | "done" | "error" = "pending") {
+function mockServer(
+  initialStatus: "pending" | "done" | "error" = "pending",
+  extra: { usage?: { inputTokens: number } | null; durationMs?: number | null } = {},
+) {
   const state = { status: initialStatus, calls: 0 };
   vi.stubGlobal(
     "fetch",
@@ -25,7 +39,13 @@ function mockServer(initialStatus: "pending" | "done" | "error" = "pending") {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ jobId: "job-1", status: state.status, result: state.status === "done" ? [] : null }),
+        json: async () => ({
+          jobId: "job-1",
+          status: state.status,
+          result: state.status === "done" ? [] : null,
+          usage: state.status === "done" ? (extra.usage ?? null) : null,
+          durationMs: state.status === "done" ? (extra.durationMs ?? null) : null,
+        }),
       } as Response;
     }),
   );
@@ -67,6 +87,17 @@ describe("VenueResultsFlow", () => {
     state.status = "error";
     await vi.advanceTimersByTimeAsync(3000);
     expect(await screen.findByText("추천 생성에 실패했어요")).toBeInTheDocument();
+  });
+
+  it("완료 응답의 usage·durationMs를 결과 화면에 그대로 전달한다", async () => {
+    const state = mockServer("pending", { usage: { inputTokens: 1234 }, durationMs: 45_000 });
+    render(
+      <VenueResultsFlow regions={["강남"]} partySize={8} budgetPerPerson={30000} votes={votes} />,
+    );
+    state.status = "done";
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await screen.findByText(/usage:1234/)).toBeInTheDocument();
+    expect(screen.getByText(/durationMs:45000/)).toBeInTheDocument();
   });
 
   it("실패 후 다시 시도 클릭 → 로딩 화면으로 돌아가고 다시 생성이 시작된다", async () => {

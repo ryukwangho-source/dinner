@@ -1,3 +1,4 @@
+import type Anthropic from "@anthropic-ai/sdk";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ALLOWED_CATEGORIES,
@@ -136,6 +137,52 @@ describe("toVenues", () => {
       { name: "도보정보없음", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: null },
     ];
     expect(toVenues(raw, "강남")[0].walkingMinutes).toBeNull();
+  });
+});
+
+describe("generateVenues (직접 API 경로 — client 주입)", () => {
+  function fakeVenuesResponse(count: number) {
+    return {
+      parsed_output: {
+        venues: Array.from({ length: count }, (_, i) => ({
+          name: `장소${i}`,
+          category: "고깃집",
+          rating: 4.5,
+          reviewCount: 100,
+          pricePerPerson: 25000,
+          walkingMinutes: 5,
+        })),
+      },
+      usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+    };
+  }
+
+  function fakeClient(): Anthropic {
+    return {
+      messages: {
+        stream: () => ({
+          finalMessage: async () => ({
+            content: [{ type: "text", text: "조사 결과" }],
+            stop_reason: "end_turn",
+            usage: { input_tokens: 1000, output_tokens: 300, cache_creation_input_tokens: 200, cache_read_input_tokens: 50 },
+          }),
+        }),
+        parse: async () => fakeVenuesResponse(7),
+      },
+    } as unknown as Anthropic;
+  }
+
+  it("research·extract 두 콜의 usage를 합산해 반환한다", async () => {
+    const { usage } = await generateVenues(["강남"], 8, 30000, fakeClient());
+    expect(usage).toEqual({
+      inputTokens: 1100,
+      outputTokens: 350,
+      cacheReadTokens: 50,
+      cacheWriteTokens: 200,
+      costUsd: expect.any(Number),
+      models: ["claude-sonnet-5"],
+    });
+    expect(usage?.costUsd).toBeGreaterThan(0);
   });
 });
 

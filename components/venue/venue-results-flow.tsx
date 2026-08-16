@@ -3,13 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GenerationStatus } from "@/components/venue/generation-status";
 import { ResultList } from "@/components/venue/result-list";
+import type { GenerationUsage } from "@/types/generation-usage";
 import type { RegionRecommendation } from "@/types/recommendation";
 import type { VoteSummary } from "@/types/vote";
 
 type Phase =
   | { kind: "loading" }
   | { kind: "error" }
-  | { kind: "done"; results: RegionRecommendation[] };
+  | {
+      kind: "done";
+      results: RegionRecommendation[];
+      usage: GenerationUsage | null;
+      durationMs: number | null;
+    };
 
 const POLL_MS = 3000;
 
@@ -44,7 +50,12 @@ export function VenueResultsFlow({ regions, partySize, budgetPerPerson, votes }:
     }
     const data = await res.json();
     if (data.status === "done") {
-      setPhase({ kind: "done", results: data.result ?? [] });
+      setPhase({
+        kind: "done",
+        results: data.result ?? [],
+        usage: data.usage ?? null,
+        durationMs: data.durationMs ?? null,
+      });
     } else if (data.status === "error") {
       setPhase({ kind: "error" });
     } else {
@@ -90,6 +101,8 @@ export function VenueResultsFlow({ regions, partySize, budgetPerPerson, votes }:
           budgetPerPerson={budgetPerPerson}
           results={phase.results}
           votes={votes}
+          usage={phase.usage}
+          durationMs={phase.durationMs}
         />
       );
   }

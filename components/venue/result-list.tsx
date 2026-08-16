@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { VenueCard } from "@/components/venue/venue-card";
 import { ActiveVotesList } from "@/components/vote/active-votes-list";
+import { formatDurationKo } from "@/lib/format-duration";
 import { shareVenues } from "@/lib/venue-share";
+import type { GenerationUsage } from "@/types/generation-usage";
 import type { RegionRecommendation } from "@/types/recommendation";
 import type { VoteSummary } from "@/types/vote";
 
@@ -17,6 +19,8 @@ export interface ResultListProps {
   budgetPerPerson: number;
   results: RegionRecommendation[];
   votes: VoteSummary[];
+  usage?: GenerationUsage | null;
+  durationMs?: number | null;
 }
 
 export function ResultList({
@@ -25,6 +29,8 @@ export function ResultList({
   budgetPerPerson,
   results,
   votes,
+  usage = null,
+  durationMs = null,
 }: ResultListProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -91,6 +97,22 @@ export function ResultList({
       <div className="text-xs text-muted-foreground">
         {regions.join(", ")} · {partySize}명 · 1인 {budgetPerPerson.toLocaleString("ko-KR")}원
       </div>
+
+      {(durationMs !== null || usage) && (
+        <div className="text-xs text-muted-foreground">
+          {durationMs !== null && <span>검색 시간 {formatDurationKo(durationMs)}</span>}
+          {durationMs !== null && usage && " · "}
+          {usage && (
+            <span>
+              토큰 {usage.inputTokens.toLocaleString("ko-KR")} in /{" "}
+              {usage.outputTokens.toLocaleString("ko-KR")} out
+              {usage.cacheReadTokens > 0 &&
+                ` (캐시 읽기 ${usage.cacheReadTokens.toLocaleString("ko-KR")})`}
+              {usage.costUsd > 0 && ` · 약 $${usage.costUsd.toFixed(3)}`}
+            </span>
+          )}
+        </div>
+      )}
 
       {noneWithinBudget && (
         <Alert>

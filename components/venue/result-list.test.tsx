@@ -61,6 +61,8 @@ function renderList(
     regions: string[];
     partySize: number;
     budgetPerPerson: number;
+    usage: { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; costUsd: number; models: string[] } | null;
+    durationMs: number | null;
   }> = {},
 ) {
   return render(
@@ -70,6 +72,8 @@ function renderList(
       budgetPerPerson={overrides.budgetPerPerson ?? 30000}
       results={overrides.results ?? oneRegionResults}
       votes={overrides.votes ?? []}
+      usage={overrides.usage}
+      durationMs={overrides.durationMs}
     />,
   );
 }
@@ -229,6 +233,33 @@ describe("ResultList", () => {
     renderList();
     await user.click(screen.getAllByRole("checkbox")[0]);
     expect(screen.getByRole("button", { name: "전체 선택" })).toBeInTheDocument();
+  });
+
+  it("durationMs가 있으면 검색 시간을 표시한다", () => {
+    renderList({ durationMs: 90_000 });
+    expect(screen.getByText(/검색 시간 1분 30초/)).toBeInTheDocument();
+  });
+
+  it("usage가 있으면 토큰 사용량과 비용을 표시한다", () => {
+    renderList({
+      usage: {
+        inputTokens: 12000,
+        outputTokens: 3000,
+        cacheReadTokens: 500,
+        cacheWriteTokens: 0,
+        costUsd: 0.054,
+        models: ["claude-sonnet-5"],
+      },
+    });
+    expect(screen.getByText(/토큰 12,000 in \/ 3,000 out/)).toBeInTheDocument();
+    expect(screen.getByText(/캐시 읽기 500/)).toBeInTheDocument();
+    expect(screen.getByText(/약 \$0\.054/)).toBeInTheDocument();
+  });
+
+  it("usage·durationMs가 모두 없으면 아무것도 표시하지 않는다", () => {
+    renderList();
+    expect(screen.queryByText(/검색 시간/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/토큰/)).not.toBeInTheDocument();
   });
 
   it("진행 중인 투표 목록을 함께 렌더한다", () => {

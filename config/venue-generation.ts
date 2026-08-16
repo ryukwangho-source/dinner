@@ -37,3 +37,17 @@ export const ALLOWED_CATEGORIES = [...COURSE_ONE_CATEGORIES, ...COURSE_TWO_CATEG
 
 /** 같은 지역·인원수·예산 조합의 생성 결과를 재사용하는 유효 시간 */
 export const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * claude-sonnet-5 1토큰당 요금(USD, 2026-08-31까지 적용되는 도입가 기준).
+ * 캐시 read/write는 공식 배율(입력가의 0.1배/1.25배)을 곱해 계산한다.
+ * 도입가 종료 후에는 input $3.00, output $15.00/1M로 갱신 필요.
+ */
+const SONNET_5_INPUT_PRICE_PER_TOKEN = 2.0 / 1_000_000;
+const SONNET_5_OUTPUT_PRICE_PER_TOKEN = 10.0 / 1_000_000;
+export const SONNET_5_PRICE_PER_TOKEN = {
+  input: SONNET_5_INPUT_PRICE_PER_TOKEN,
+  output: SONNET_5_OUTPUT_PRICE_PER_TOKEN,
+  cacheRead: SONNET_5_INPUT_PRICE_PER_TOKEN * 0.1,
+  cacheWrite: SONNET_5_INPUT_PRICE_PER_TOKEN * 1.25,
+};

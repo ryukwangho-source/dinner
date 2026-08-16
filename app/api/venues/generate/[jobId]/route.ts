@@ -9,6 +9,10 @@ export async function GET(_request: Request, context: RouteContext) {
   if (!job) {
     return Response.json({ error: "작업을 찾을 수 없습니다" }, { status: 404 });
   }
+  const durationMs =
+    job.status === "done" || job.status === "error"
+      ? Date.parse(job.updatedAt) - Date.parse(job.createdAt)
+      : null;
   return Response.json({
     jobId: job.id,
     status: job.status,
@@ -18,5 +22,6 @@ export async function GET(_request: Request, context: RouteContext) {
     result: job.result,
     error: job.error,
     usage: job.usage,
+    durationMs,
   });
 }

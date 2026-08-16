@@ -45,4 +45,22 @@ describe("/api/venues/generate/[jobId]", () => {
     const res = await getGenerationJob(new Request("http://localhost"), jobRequest("no-such-id"));
     expect(res.status).toBe(404);
   });
+
+  it("완료된 job은 생성에 걸린 시간(durationMs)이 0 이상으로 담긴다", async () => {
+    const job = store.create(["강남"], 8, 30000);
+    store.markDone(job.id, []);
+
+    const res = await getGenerationJob(new Request("http://localhost"), jobRequest(job.id));
+    const body = await res.json();
+    expect(typeof body.durationMs).toBe("number");
+    expect(body.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("아직 진행 중인 job은 durationMs가 null이다", async () => {
+    const job = store.create(["강남"], 8, 30000);
+
+    const res = await getGenerationJob(new Request("http://localhost"), jobRequest(job.id));
+    const body = await res.json();
+    expect(body.durationMs).toBeNull();
+  });
 });

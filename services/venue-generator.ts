@@ -12,6 +12,7 @@ import {
   RATING_MIN,
   RELAXED_REVIEW_MIN,
   REVIEW_MIN,
+  SONNET_5_PRICE_PER_TOKEN,
   WEB_SEARCH_MAX_USES,
 } from "@/config/venue-generation";
 import { getAnthropic } from "@/lib/anthropic";
@@ -132,11 +133,42 @@ export function splitByCourse(venues: Venue[]): { courseOne: Venue[]; courseTwo:
 
 // ── 직접 API 경로 (ANTHROPIC_API_KEY 있을 때 — web_search tool로 검색 횟수 상한 강제) ──
 
-async function runResearch(client: Anthropic, region: string, partySize: number): Promise<string> {
+interface RawUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number | null | undefined;
+  cache_read_input_tokens: number | null | undefined;
+}
+
+/** 여러 API 콜의 usage를 합산해 GenerationUsage로 변환 (claude-sonnet-5 요금 기준 비용 추정 포함) */
+function toGenerationUsage(usages: RawUsage[]): GenerationUsage {
+  const totals = usages.reduce(
+    (acc, u) => ({
+      inputTokens: acc.inputTokens + u.input_tokens,
+      outputTokens: acc.outputTokens + u.output_tokens,
+      cacheReadTokens: acc.cacheReadTokens + (u.cache_read_input_tokens ?? 0),
+      cacheWriteTokens: acc.cacheWriteTokens + (u.cache_creation_input_tokens ?? 0),
+    }),
+    { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+  );
+  const costUsd =
+    totals.inputTokens * SONNET_5_PRICE_PER_TOKEN.input +
+    totals.outputTokens * SONNET_5_PRICE_PER_TOKEN.output +
+    totals.cacheReadTokens * SONNET_5_PRICE_PER_TOKEN.cacheRead +
+    totals.cacheWriteTokens * SONNET_5_PRICE_PER_TOKEN.cacheWrite;
+  return { ...totals, costUsd, models: [GENERATION_MODEL] };
+}
+
+async function runResearch(
+  client: Anthropic,
+  region: string,
+  partySize: number,
+): Promise<{ research: string; usages: RawUsage[] }> {
   const messages: Anthropic.MessageParam[] = [
     { role: "user", content: `${researchPrompt(region, partySize)}\n\n검색을 마치면 조사한 장소를 정리해 출력하라.` },
   ];
   let research = "";
+  const usages: RawUsage[] = [];
   for (let attempt = 0; attempt < 3; attempt++) {
     const stream = client.messages.stream({
       model: GENERATION_MODEL,
@@ -147,6 +179,7 @@ async function runResearch(client: Anthropic, region: string, partySize: number)
       messages,
     });
     const message = await stream.finalMessage();
+    usages.push(message.usage);
     research += message.content
       .filter((block) => block.type === "text")
       .map((block) => block.text)
@@ -155,10 +188,13 @@ async function runResearch(client: Anthropic, region: string, partySize: number)
     messages.push({ role: "assistant", content: message.content });
   }
   if (!research.trim()) throw new Error("회식 장소 조사에 실패했습니다");
-  return research;
+  return { research, usages };
 }
 
-async function extractVenues(client: Anthropic, research: string): Promise<GeneratedVenue[]> {
+async function extractVenues(
+  client: Anthropic,
+  research: string,
+): Promise<{ venues: GeneratedVenue[]; usage: RawUsage }> {
   const response = await client.messages.parse({
     model: GENERATION_MODEL,
     max_tokens: 8000,
@@ -166,7 +202,7 @@ async function extractVenues(client: Anthropic, research: string): Promise<Gener
     output_config: { format: zodOutputFormat(generatedVenuesSchema), effort: "low" },
   });
   if (!response.parsed_output) throw new Error("조사 결과 정규화에 실패했습니다");
-  return response.parsed_output.venues;
+  return { venues: response.parsed_output.venues, usage: response.usage };
 }
 
 // ── Agent SDK 경로 (ANTHROPIC_API_KEY 없을 때 — 구독 인증 폴백) ──
@@ -235,9 +271,12 @@ async function generateCandidatesForRegion(
     return { candidates: toVenues(agentResult.venues, region), usage: agentResult.usage };
   }
   const api = client ?? getAnthropic();
-  const research = await runResearch(api, region, partySize);
-  const venues = await extractVenues(api, research);
-  return { candidates: toVenues(venues, region), usage: null };
+  const { research, usages } = await runResearch(api, region, partySize);
+  const { venues, usage: extractUsage } = await extractVenues(api, research);
+  return {
+    candidates: toVenues(venues, region),
+    usage: toGenerationUsage([...usages, extractUsage]),
+  };
 }
 
 function mergeUsage(usages: (GenerationUsage | null)[]): GenerationUsage | null {
