@@ -3,7 +3,7 @@
 # 기동은 run-dinner.cmd -> 이 스크립트. 창 없이 띄우려면 run-dinner-hidden.vbs 를 쓴다
 # (시작프로그램 lnk 도 vbs 를 가리킨다).
 #
-# - 프로덕션 빌드(.next)를 0.0.0.0:3300 에 바인딩해 구동한다.
+# - 프로덕션 빌드(.next)를 0.0.0.0:3301 에 바인딩해 구동한다.
 #   3000은 invest, 3200은 travel 프로덕션 전용.
 # - 프로세스가 죽으면 자동 재시작한다. 단 즉시 다시 죽는 상황(빌드 깨짐 등)에서는
 #   대기를 지수적으로 늘려 무한 스핀을 막는다.
@@ -46,7 +46,7 @@ $consecutiveFastFailures = 0
 
 while ($true) {
     Rotate-Log
-    Write-Log 'starting dinner (0.0.0.0:3300)'
+    Write-Log 'starting dinner (0.0.0.0:3301)'
 
     $startedAt = Get-Date
     # 리다이렉션은 cmd 에 맡긴다 — PowerShell 5.1 에서 native exe 의 stderr 를 직접

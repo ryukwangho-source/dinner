@@ -16,7 +16,7 @@ Ideate → Define → Sketch → Plan → Build → Compound
 ## Development Workflow
 
 - 패키지 매니저: `bun`
-- **포트 배정**: 이 PC에서 3000은 invest 프로덕션, 3200은 travel 프로덕션, 3100은 travel dev·e2e가 상시/수시로 점유한다. dinner는 dev·e2e에 3110을, 프로덕션에 3300을 쓴다 (`bun run dev --port 3110`; playwright.config.ts도 3110 고정). 다른 포트에 붙으면 엉뚱한 앱을 테스트하게 된다.
+- **포트 배정**: 이 PC에서 3000은 invest 프로덕션, 3200은 travel 프로덕션, 3100은 travel dev·e2e가 상시/수시로 점유한다. dinner는 dev·e2e에 3110을, 프로덕션에 3301을 쓴다 (`bun run dev --port 3110`; playwright.config.ts도 3110 고정). 다른 포트에 붙으면 엉뚱한 앱을 테스트하게 된다. (3300은 원래 dinner 프로덕션 포트였으나 `IntelTechnologyAccessService`가 점유해 2026-08-16 3301로 이전했다 — 자세한 내용은 `deploy/home-pc/README.md` 참고.)
 
 ### 커밋 규칙
 - Conventional 규칙을 따르고, feature 단위로 커밋한다.

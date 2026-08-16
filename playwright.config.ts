@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // 이 PC의 포트 배정: 3000=invest, 3200=travel 프로덕션 전용, 3100=travel dev/e2e.
-// dinner는 3110(dev/e2e) / 3300(프로덕션)을 쓴다.
+// dinner는 3110(dev/e2e) / 3301(프로덕션)을 쓴다.
 const PORT = 3110;
 
 export default defineConfig({

@@ -1,12 +1,12 @@
 # 집 PC 자동 배포 감시 루프 (dinner).
 #
 # 2분마다 origin/main을 확인해 새 커밋이 있으면 pull(ff-only) -> build ->
-# 기존 서버 프로세스(포트 3300) 종료까지 자동 처리한다.
+# 기존 서버 프로세스(포트 3301) 종료까지 자동 처리한다.
 #
 # 기동은 auto-deploy.cmd -> 이 스크립트. 창 없이 띄우려면 auto-deploy-hidden.vbs 를 쓴다
 # (run-dinner-hidden.vbs 와 같은 패턴 — 시작프로그램에 둘 다 등록해서 함께 띄운다).
 #
-# 서버를 다시 띄우는 로직은 이 스크립트가 갖지 않는다 — 새 빌드가 성공하면 포트 3300을
+# 서버를 다시 띄우는 로직은 이 스크립트가 갖지 않는다 — 새 빌드가 성공하면 포트 3301을
 # 쓰는 node.exe만 종료하고, run-dinner.ps1의 재시작 루프가 5초 내로 새 빌드를 집어
 # 다시 띄운다. 재시작·백오프·로그 로테이션을 여기서 중복 구현하지 않기 위한 역할 분리다.
 #
@@ -28,7 +28,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out
 $log = Join-Path $logDir 'deploy.log'
 
 $pollSeconds = 120
-$port = 3300
+$port = 3301
 $maxLogBytes = 5MB
 
 function Write-Log($message) {
