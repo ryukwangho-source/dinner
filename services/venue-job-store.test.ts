@@ -1,4 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { randomUUID } from "node:crypto";
+import { rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createVenueJobStore, type VenueJobStore } from "@/services/venue-job-store";
 import type { GenerationUsage } from "@/types/generation-usage";
 import type { RegionRecommendation } from "@/types/recommendation";
@@ -112,6 +116,43 @@ describe("venueJobStore", () => {
       const job = store.create(["강남", "홍대"], 8, 30000);
       store.markDone(job.id, fakeResult());
       expect(store.findFresh(["홍대", "강남"], 8, 30000, new Date())).toBeNull();
+    });
+  });
+
+  describe("프로세스 재시작 시 정리", () => {
+    let dbPath: string;
+
+    beforeEach(() => {
+      dbPath = path.join(tmpdir(), `venue-jobs-test-${randomUUID()}.db`);
+    });
+
+    afterEach(() => {
+      for (const suffix of ["", "-shm", "-wal"]) {
+        try {
+          rmSync(`${dbPath}${suffix}`, { force: true });
+        } catch {
+          /* 무시 — 정리 실패해도 테스트 결과에는 영향 없음 */
+        }
+      }
+    });
+
+    it("이전 프로세스에서 pending/running으로 남은 job은 새 프로세스가 시작할 때 error로 정리된다", () => {
+      const first = createVenueJobStore(dbPath);
+      const pendingJob = first.create(["강남"], 8, 30000);
+      const runningJob = first.create(["홍대"], 8, 30000);
+      first.markRunning(runningJob.id);
+      const doneJob = first.create(["잠실"], 8, 30000);
+      first.markDone(doneJob.id, fakeResult());
+
+      // 새 프로세스가 시작하는 상황을 재현 — 같은 파일을 다시 연다
+      const second = createVenueJobStore(dbPath);
+
+      expect(second.get(pendingJob.id)?.status).toBe("error");
+      expect(second.get(pendingJob.id)?.error).toBe(
+        "서버 재시작으로 생성이 중단됐어요. 다시 시도해주세요.",
+      );
+      expect(second.get(runningJob.id)?.status).toBe("error");
+      expect(second.get(doneJob.id)?.status).toBe("done");
     });
   });
 

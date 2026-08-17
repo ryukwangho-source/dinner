@@ -75,6 +75,14 @@ export function createVenueJobStore(dbPath: string) {
     )
   `);
 
+  // 이 프로세스가 막 시작하는 시점에 pending/running으로 남아있는 job은 전부
+  // 이전 프로세스(배포로 재기동되기 전 등)에서 끝맺지 못하고 죽은 것뿐이다 —
+  // fire-and-forget 생성은 프로세스가 죽으면 결과를 영영 못 받으므로, 그대로 두면
+  // 폴링하던 화면이 "추천 장소를 찾고 있어요"에서 무한정 멈춘다. 시작할 때 한 번 정리한다.
+  db.prepare(
+    "UPDATE venue_jobs SET status = 'error', error = ?, updated_at = ? WHERE status IN ('pending', 'running')",
+  ).run("서버 재시작으로 생성이 중단됐어요. 다시 시도해주세요.", new Date().toISOString());
+
   const findByKeyStmt = db.prepare(
     "SELECT * FROM venue_jobs WHERE regions = ? AND party_size = ? AND budget_per_person = ? AND status = ? ORDER BY created_at DESC LIMIT 1",
   );
