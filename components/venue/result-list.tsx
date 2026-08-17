@@ -65,6 +65,12 @@ export function ResultList({
     });
   }
 
+  function dismissSelected() {
+    if (selected.size === 0) return;
+    setDismissed((prev) => new Set([...prev, ...selected]));
+    setSelected(new Set());
+  }
+
   const allSelected = allRanked.length > 0 && selected.size === allRanked.length;
 
   function toggleSelectAll() {
@@ -202,6 +208,9 @@ export function ResultList({
           onClick={handleSave}
         >
           선택 저장
+        </Button>
+        <Button variant="outline" disabled={selected.size === 0} onClick={dismissSelected}>
+          선택 삭제
         </Button>
         <Button variant="outline" onClick={handleShare}>
           카톡 공유

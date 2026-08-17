@@ -286,6 +286,27 @@ describe("ResultList", () => {
     expect(screen.getByText("0곳 선택됨")).toBeInTheDocument();
   });
 
+  it("선택 없이는 선택 삭제 버튼이 비활성화된다", () => {
+    renderList();
+    expect(screen.getByRole("button", { name: "선택 삭제" })).toBeDisabled();
+  });
+
+  it("카드 여러 개 선택 후 선택 삭제 클릭 → 한 번에 화면에서 사라지고 선택 개수가 초기화된다", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const [a, b] = allVenues(oneRegionResults);
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]);
+    await user.click(checkboxes[1]);
+    await user.click(screen.getByRole("button", { name: "선택 삭제" }));
+
+    expect(screen.queryByText(a.venue.name)).not.toBeInTheDocument();
+    expect(screen.queryByText(b.venue.name)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    expect(screen.getByText("0곳 선택됨")).toBeInTheDocument();
+  });
+
   it("삭제한 장소는 카톡 공유·선택 저장 대상에서도 제외된다", async () => {
     vi.mocked(shareVenues).mockResolvedValue("copied");
     const user = userEvent.setup();
