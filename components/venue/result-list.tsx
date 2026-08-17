@@ -34,9 +34,16 @@ export function ResultList({
 }: ResultListProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
 
-  const allRanked = results.flatMap((r) => [...r.courseOne, ...r.courseTwo]);
+  const visibleResults = results.map((r) => ({
+    ...r,
+    courseOne: r.courseOne.filter((ranked) => !dismissed.has(ranked.venue.id)),
+    courseTwo: r.courseTwo.filter((ranked) => !dismissed.has(ranked.venue.id)),
+  }));
+
+  const allRanked = visibleResults.flatMap((r) => [...r.courseOne, ...r.courseTwo]);
   const noneWithinBudget = allRanked.length > 0 && allRanked.every((r) => !r.withinBudget);
 
   function toggle(id: string, checked: boolean) {
@@ -44,6 +51,16 @@ export function ResultList({
       const next = new Set(prev);
       if (checked) next.add(id);
       else next.delete(id);
+      return next;
+    });
+  }
+
+  function dismiss(id: string) {
+    setDismissed((prev) => new Set(prev).add(id));
+    setSelected((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
       return next;
     });
   }
@@ -78,7 +95,7 @@ export function ResultList({
   }
 
   async function handleShare() {
-    const result = await shareVenues(results);
+    const result = await shareVenues(visibleResults);
     if (result === "copied") toast.success("클립보드에 복사했어요");
     if (result === "failed") toast.error("공유에 실패했어요");
   }
@@ -122,7 +139,7 @@ export function ResultList({
         </Alert>
       )}
 
-      {results.map(({ region, courseOne, courseTwo }) => (
+      {visibleResults.map(({ region, courseOne, courseTwo }) => (
         <div key={region} className="flex flex-col gap-3">
           <h2 className="text-sm font-bold">{region}</h2>
 
@@ -137,6 +154,7 @@ export function ResultList({
                     withinBudget={withinBudget}
                     checked={selected.has(venue.id)}
                     onCheckedChange={(checked) => toggle(venue.id, checked)}
+                    onDismiss={() => dismiss(venue.id)}
                   />
                 ))}
               </div>
@@ -156,6 +174,7 @@ export function ResultList({
                     withinBudget={withinBudget}
                     checked={selected.has(venue.id)}
                     onCheckedChange={(checked) => toggle(venue.id, checked)}
+                    onDismiss={() => dismiss(venue.id)}
                   />
                 ))}
               </div>

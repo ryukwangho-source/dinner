@@ -72,4 +72,25 @@ describe("VenueCard", () => {
     );
     expect(screen.queryByText(/도보/)).not.toBeInTheDocument();
   });
+
+  it("onDismiss가 없으면 삭제 버튼이 보이지 않는다", () => {
+    render(<VenueCard venue={venue} withinBudget checked={false} onCheckedChange={() => {}} />);
+    expect(screen.queryByRole("button", { name: `${venue.name} 삭제` })).not.toBeInTheDocument();
+  });
+
+  it("onDismiss가 있으면 삭제 버튼이 보이고 클릭하면 호출된다", async () => {
+    const user = userEvent.setup();
+    const onDismiss = vi.fn();
+    render(
+      <VenueCard
+        venue={venue}
+        withinBudget
+        checked={false}
+        onCheckedChange={() => {}}
+        onDismiss={onDismiss}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: `${venue.name} 삭제` }));
+    expect(onDismiss).toHaveBeenCalled();
+  });
 });

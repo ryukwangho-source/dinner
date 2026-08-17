@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPinIcon } from "lucide-react";
+import { MapPinIcon, XIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +18,10 @@ export interface VenueCardProps {
   withinBudget: boolean;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  onDismiss?: () => void;
 }
 
-export function VenueCard({ venue, withinBudget, checked, onCheckedChange }: VenueCardProps) {
+export function VenueCard({ venue, withinBudget, checked, onCheckedChange, onDismiss }: VenueCardProps) {
   return (
     <Card>
       <CardContent className="flex gap-3">
@@ -45,11 +46,23 @@ export function VenueCard({ venue, withinBudget, checked, onCheckedChange }: Ven
                 </a>
               </Button>
             </span>
-            {withinBudget ? (
-              <span className="text-xs text-muted-foreground">★ {venue.rating}</span>
-            ) : (
-              <Badge variant="secondary">예산 초과</Badge>
-            )}
+            <span className="flex items-center gap-2">
+              {withinBudget ? (
+                <span className="text-xs text-muted-foreground">★ {venue.rating}</span>
+              ) : (
+                <Badge variant="secondary">예산 초과</Badge>
+              )}
+              {onDismiss && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={onDismiss}
+                  aria-label={`${venue.name} 삭제`}
+                >
+                  <XIcon />
+                </Button>
+              )}
+            </span>
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             {venue.category} · {venue.region}

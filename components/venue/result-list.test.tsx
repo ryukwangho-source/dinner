@@ -262,6 +262,45 @@ describe("ResultList", () => {
     expect(screen.queryByText(/토큰/)).not.toBeInTheDocument();
   });
 
+  it("카드 삭제 버튼 클릭 → 그 장소가 화면에서 사라진다", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const [a] = allVenues(oneRegionResults);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(5);
+
+    await user.click(screen.getByRole("button", { name: `${a.venue.name} 삭제` }));
+
+    expect(screen.queryByText(a.venue.name)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+  });
+
+  it("체크된 카드를 삭제하면 선택 개수도 함께 줄어든다", async () => {
+    const user = userEvent.setup();
+    renderList();
+    const [a] = allVenues(oneRegionResults);
+
+    await user.click(screen.getAllByRole("checkbox")[0]);
+    expect(screen.getByText("1곳 선택됨")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: `${a.venue.name} 삭제` }));
+    expect(screen.getByText("0곳 선택됨")).toBeInTheDocument();
+  });
+
+  it("삭제한 장소는 카톡 공유·선택 저장 대상에서도 제외된다", async () => {
+    vi.mocked(shareVenues).mockResolvedValue("copied");
+    const user = userEvent.setup();
+    renderList();
+    const [a, b] = allVenues(oneRegionResults);
+
+    await user.click(screen.getByRole("button", { name: `${a.venue.name} 삭제` }));
+    await user.click(screen.getByRole("button", { name: "카톡 공유" }));
+
+    const [calledResults] = vi.mocked(shareVenues).mock.calls[0];
+    const remainingIds = calledResults.flatMap((r) => [...r.courseOne, ...r.courseTwo]).map((r) => r.venue.id);
+    expect(remainingIds).not.toContain(a.venue.id);
+    expect(remainingIds).toContain(b.venue.id);
+  });
+
   it("진행 중인 투표 목록을 함께 렌더한다", () => {
     const votes: VoteSummary[] = [
       {
