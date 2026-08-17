@@ -171,12 +171,12 @@ async function runResearch(
   ];
   let research = "";
   const usages: RawUsage[] = [];
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     const stream = client.messages.stream({
       model: GENERATION_MODEL,
       max_tokens: 16000,
       thinking: { type: "adaptive" },
-      output_config: { effort: "medium" },
+      output_config: { effort: "low" },
       tools: [{ type: "web_search_20260209", name: "web_search", max_uses: WEB_SEARCH_MAX_USES }],
       messages,
     });
