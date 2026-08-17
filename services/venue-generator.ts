@@ -16,7 +16,7 @@ import {
   WEB_SEARCH_MAX_USES,
 } from "@/config/venue-generation";
 import { getAnthropic } from "@/lib/anthropic";
-import { rankVenueCandidates } from "@/lib/venue-ranking";
+import { pickDiverseTopN, rankVenueCandidates, sortVenueCandidates } from "@/lib/venue-ranking";
 import { venueGenerationFixture } from "@/services/fixtures/venue-generation-fixture";
 import type { GenerationUsage } from "@/types/generation-usage";
 import type { RegionRecommendation, Venue } from "@/types/recommendation";
@@ -43,7 +43,7 @@ function researchPrompt(region: string, partySize: number): string {
 - 지역(기준점): ${region}
 - 인원: ${partySize}명
 - 거리 제한: "${region}"에서 도보 ${MAX_WALKING_MINUTES}분 이내인 곳만 조사한다. 도보 시간을 확인할 수 없는 곳은 아예 후보에서 뺀다.
-- 1차(식사 위주) 업종: ${COURSE_ONE_CATEGORIES.join("·")} — 이 중에서 최소 7곳
+- 1차(식사 위주) 업종: ${COURSE_ONE_CATEGORIES.join("·")} — 이 중에서 최소 7곳. 같은 업종에 몰리지 않도록 서로 다른 업종을 최대한 다양하게 섞어서 조사한다(예: 고깃집·일식·중식·양식처럼 메뉴가 겹치지 않게 — 가능하면 업종당 1~2곳 이내로 제한)
 - 2차(1차 이후 갈 만한 간단한 술자리) 업종: ${COURSE_TWO_CATEGORIES.join("·")} — 이 중에서 최소 5곳
 - 총 조사 대상(비용 절감을 위해 딱 필요한 만큼만): ${CANDIDATE_COUNT}곳. 그 이상은 조사하지 않는다. 카페·디저트카페·편의점 등 회식과 무관한 곳은 제외한다.
 - 검색은 필요한 만큼만 — 같은 정보를 여러 번 다시 찾지 말고, 한 번에 여러 후보를 확인할 수 있으면 한 번에 확인하라.
@@ -294,7 +294,8 @@ function mergeUsage(usages: (GenerationUsage | null)[]): GenerationUsage | null 
 
 /**
  * 지역마다 회식 장소를 실시간 생성해, 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 곳 중
- * 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다.
+ * 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다. 1차는 같은 업종이 몰리지 않도록
+ * 업종을 최대한 다양하게 섞어 고른다(pickDiverseTopN) — 2차는 업종이 이자카야·호프 둘뿐이라 그대로 둔다.
  * ANTHROPIC_API_KEY가 있으면 직접 API(web_search tool, 검색 횟수 상한 강제 + 구조화 출력),
  * 없으면 Agent SDK(구독 인증) 경로를 쓴다.
  * GENERATE_FIXTURE=1이면 실제 웹검색 없이 고정 fixture를 쓴다(테스트·E2E 전용, 비용 회피).
@@ -311,7 +312,7 @@ export async function generateVenues(
       const { courseOne, courseTwo } = splitByCourse(filterWithinWalkingDistance(candidates));
       return {
         region,
-        courseOne: rankVenueCandidates(courseOne, budgetPerPerson).slice(0, TOP_N),
+        courseOne: pickDiverseTopN(sortVenueCandidates(courseOne, budgetPerPerson), TOP_N),
         courseTwo: rankVenueCandidates(courseTwo, budgetPerPerson).slice(0, TOP_N),
         usage,
       };

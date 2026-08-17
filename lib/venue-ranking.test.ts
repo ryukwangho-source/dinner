@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankVenueCandidates } from "@/lib/venue-ranking";
+import { pickDiverseTopN, rankVenueCandidates, sortVenueCandidates } from "@/lib/venue-ranking";
 import type { Venue } from "@/types/recommendation";
 
 function makeVenue(id: string, overrides: Partial<Venue> = {}): Venue {
@@ -64,5 +64,47 @@ describe("rankVenueCandidates", () => {
 
   it("후보가 없으면 빈 배열을 반환한다", () => {
     expect(rankVenueCandidates([], 30000)).toEqual([]);
+  });
+});
+
+describe("sortVenueCandidates", () => {
+  it("자르지 않고 전체 후보를 정렬해 반환한다", () => {
+    const venues = Array.from({ length: 8 }, (_, i) => makeVenue(`v${i}`, { rating: 4.0 + i * 0.05 }));
+    expect(sortVenueCandidates(venues, 30000)).toHaveLength(8);
+  });
+});
+
+describe("pickDiverseTopN", () => {
+  it("업종이 겹치면 순위가 낮아도 다른 업종을 우선 채운다", () => {
+    const venues = [
+      makeVenue("고깃집-1등", { category: "고깃집", rating: 4.9 }),
+      makeVenue("고깃집-2등", { category: "고깃집", rating: 4.8 }),
+      makeVenue("일식-3등", { category: "일식", rating: 4.7 }),
+      makeVenue("중식-4등", { category: "중식", rating: 4.6 }),
+    ];
+    const ranked = sortVenueCandidates(venues, 30000);
+    const picked = pickDiverseTopN(ranked, 3);
+    expect(picked.map((p) => p.venue.category)).toEqual(["고깃집", "일식", "중식"]);
+    expect(picked.map((p) => p.venue.id)).toEqual(["고깃집-1등", "일식-3등", "중식-4등"]);
+  });
+
+  it("서로 다른 업종이 topN보다 적으면 남은 슬롯은 순위 순서대로 같은 업종을 채운다", () => {
+    const venues = [
+      makeVenue("고깃집-1등", { category: "고깃집", rating: 4.9 }),
+      makeVenue("고깃집-2등", { category: "고깃집", rating: 4.8 }),
+      makeVenue("일식-3등", { category: "일식", rating: 4.7 }),
+    ];
+    const ranked = sortVenueCandidates(venues, 30000);
+    const picked = pickDiverseTopN(ranked, 3);
+    expect(picked.map((p) => p.venue.id)).toEqual(["고깃집-1등", "일식-3등", "고깃집-2등"]);
+  });
+
+  it("항상 topN개(또는 후보 전체 중 적은 쪽)를 반환한다", () => {
+    const venues = [makeVenue("a"), makeVenue("b")];
+    expect(pickDiverseTopN(sortVenueCandidates(venues, 30000), 5)).toHaveLength(2);
+  });
+
+  it("후보가 없으면 빈 배열을 반환한다", () => {
+    expect(pickDiverseTopN([], 5)).toEqual([]);
   });
 });

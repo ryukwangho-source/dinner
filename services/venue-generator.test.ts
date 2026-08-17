@@ -186,6 +186,51 @@ describe("generateVenues (직접 API 경로 — client 주입)", () => {
   });
 });
 
+describe("generateVenues — 1차 업종 다양성", () => {
+  function fakeClient(categories: string[]): Anthropic {
+    return {
+      messages: {
+        stream: () => ({
+          finalMessage: async () => ({
+            content: [{ type: "text", text: "조사 결과" }],
+            stop_reason: "end_turn",
+            usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+          }),
+        }),
+        parse: async () => ({
+          parsed_output: {
+            venues: categories.map((category, i) => ({
+              name: `장소${i}`,
+              category,
+              rating: 4.9 - i * 0.1,
+              reviewCount: 100,
+              pricePerPerson: 25000,
+              walkingMinutes: 5,
+            })),
+          },
+          usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+        }),
+      },
+    } as unknown as Anthropic;
+  }
+
+  it("서로 다른 업종이 5개 이상이면 1차 결과 5곳의 업종이 겹치지 않는다", async () => {
+    const client = fakeClient(["고깃집", "고깃집", "일식", "중식", "양식", "횟집", "곱창"]);
+    const { results } = await generateVenues(["강남"], 8, 30000, client);
+    const categories = results[0].courseOne.map((r) => r.venue.category);
+    expect(categories).toHaveLength(5);
+    expect(new Set(categories).size).toBe(5);
+  });
+
+  it("서로 다른 업종이 5개 미만이면 남은 슬롯은 순위 순서대로 같은 업종으로 채운다", async () => {
+    const client = fakeClient(["고깃집", "고깃집", "고깃집", "일식", "중식"]);
+    const { results } = await generateVenues(["강남"], 8, 30000, client);
+    const categories = results[0].courseOne.map((r) => r.venue.category);
+    expect(categories).toHaveLength(5);
+    expect(new Set(categories)).toEqual(new Set(["고깃집", "일식", "중식"]));
+  });
+});
+
 describe("splitByCourse", () => {
   it("업종에 따라 1차(식사)·2차(술) 후보로 나눈다", () => {
     const venues = toVenues(
