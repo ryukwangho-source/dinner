@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ import type { RecommendationFormErrors } from "@/lib/recommendation-validation";
 
 export function RecommendForm() {
   const router = useRouter();
-  const [regions, setRegions] = useState<string[]>([]);
+  const searchParams = useSearchParams();
+  const prefilledRegion = searchParams.get("region");
+  const [regions, setRegions] = useState<string[]>(prefilledRegion ? [prefilledRegion] : []);
   const [regionInput, setRegionInput] = useState("");
   const [partySize, setPartySize] = useState("");
   const [budgetPerPerson, setBudgetPerPerson] = useState("");

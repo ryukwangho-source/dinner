@@ -29,10 +29,16 @@ test("입력 오류→재제출→추천→선택 저장→저장 목록 확인�
 
   // 저장 목록에서 확인
   await page.goto("/saved");
-  const deleteButtons = page.getByRole("button", { name: "삭제", exact: true });
-  await expect(deleteButtons).toHaveCount(2);
+  const savedCheckboxes = page.getByRole("checkbox");
+  await expect(savedCheckboxes).toHaveCount(2);
 
-  // 1곳 삭제 → 남은 1곳만 존재
-  await deleteButtons.first().click();
-  await expect(deleteButtons).toHaveCount(1);
+  // 1곳 선택 후 삭제 → 남은 1곳만 존재하고, 삭제한 지역으로 다시 추천받기 링크가 뜬다
+  await savedCheckboxes.first().click();
+  await page.getByRole("button", { name: "선택 삭제" }).click();
+  await page.getByRole("button", { name: "삭제하기" }).click();
+  await expect(savedCheckboxes).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "오산역" })).toHaveAttribute(
+    "href",
+    `/?region=${encodeURIComponent("오산역")}`,
+  );
 });

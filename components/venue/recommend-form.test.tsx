@@ -3,8 +3,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const pushMock = vi.fn();
+let currentSearch = "";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => new URLSearchParams(currentSearch),
 }));
 
 import { RecommendForm } from "@/components/venue/recommend-form";
@@ -18,6 +20,7 @@ async function addRegion(user: ReturnType<typeof userEvent.setup>, region: strin
 describe("RecommendForm", () => {
   beforeEach(() => {
     pushMock.mockClear();
+    currentSearch = "";
   });
 
   it("지역·인원수·예산을 비운 채 추천받기를 누르면 입력해주세요 안내가 표시되고 이동하지 않는다", async () => {
@@ -63,6 +66,13 @@ describe("RecommendForm", () => {
     expect(pushMock).toHaveBeenCalledWith(
       `/results?${new URLSearchParams({ regions: "동탄역,강남역", people: "8", budget: "30000" }).toString()}`,
     );
+  });
+
+  it("URL에 region이 있으면 지역 칩으로 미리 채워진다", () => {
+    currentSearch = "region=%EB%8F%99%ED%83%84%EC%97%AD";
+    render(<RecommendForm />);
+
+    expect(screen.getByText("동탄역")).toBeInTheDocument();
   });
 
   it("저장한 장소 보기 링크가 /saved를 가리킨다", () => {
