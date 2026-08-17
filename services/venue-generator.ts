@@ -28,6 +28,7 @@ const generatedVenueSchema = z.object({
   category: z.string(),
   rating: z.coerce.number(),
   reviewCount: z.coerce.number(),
+  viewCount: z.coerce.number().optional(),
   pricePerPerson: z.coerce.number(),
   walkingMinutes: z.coerce.number().nullable().optional(),
 });
@@ -52,13 +53,14 @@ function researchPrompt(region: string, partySize: number): string {
 1. 정확한 이름
 2. 업종 (위 목록 중 하나)
 3. 평점(5점 만점 환산)과 리뷰 수 — 실제 검색·페이지 확인 수치를 우선한다(500·1000 같은 임의 반올림 금지). 정확한 값을 못 찾으면 신뢰할 만한 근사치라도 채운다
-4. 1인 예상 비용(원화, 식사+음주 포함 대략치)
-5. "${region}"에서 도보 예상 시간(분) — 지도상 대략적인 도보 거리로 추정. 도저히 알 수 없으면 null
+4. 조회수 — 네이버 플레이스 등에서 실제 사용자들이 조회한 횟수(있으면 그대로). 정확한 수치를 못 찾으면 리뷰 수·인기도를 참고해 실제 있을 법한 값으로 추정한다(0이나 임의 반올림 금지)
+5. 1인 예상 비용(원화, 식사+음주 포함 대략치)
+6. "${region}"에서 도보 예상 시간(분) — 지도상 대략적인 도보 거리로 추정. 도저히 알 수 없으면 null
 
 우선순위: 평점 ${RATING_MIN} 이상, 리뷰 ${REVIEW_MIN}개 이상인 곳 위주로 조사하되, 부족하면 리뷰 ${RELAXED_REVIEW_MIN}개 이상까지 포함해도 좋다.`;
 }
 
-const META_JSON_SHAPE = `{ "venues": [ { "name": string, "category": string, "rating": number, "reviewCount": number, "pricePerPerson": number, "walkingMinutes": number | null } ] }`;
+const META_JSON_SHAPE = `{ "venues": [ { "name": string, "category": string, "rating": number, "reviewCount": number, "viewCount": number, "pricePerPerson": number, "walkingMinutes": number | null } ] }`;
 
 /** 흔한 LLM JSON 오류(트레일링 콤마·// 주석)를 관대하게 정리 */
 function looseJsonClean(s: string): string {
@@ -95,8 +97,8 @@ export function parseVenuesFromText(text: string): GeneratedVenue[] {
 
 /**
  * 업종 화이트리스트·품질 문턱으로 필터링해 Venue 형태로 변환한다.
- * 조회수는 웹검색으로 신뢰성 있게 구할 수 없어 리뷰수 기반 근사치를 쓴다
- * (rankVenueCandidates의 3순위 tie-break라 순위에 미치는 영향이 작다).
+ * 조회수는 조사 단계에서 실제 값(또는 조사자의 합리적 추정치)을 받아 그대로 쓴다.
+ * 모델이 값을 못 채운 극히 드문 경우에만 리뷰수 기반 근사치로 대체한다.
  */
 export function toVenues(raw: GeneratedVenue[], region: string): Venue[] {
   const allowed = new Set<string>(ALLOWED_CATEGORIES);
@@ -110,7 +112,7 @@ export function toVenues(raw: GeneratedVenue[], region: string): Venue[] {
       region,
       rating: v.rating,
       reviewCount: v.reviewCount,
-      viewCount: Math.round(v.reviewCount * 8),
+      viewCount: v.viewCount && v.viewCount > 0 ? v.viewCount : Math.round(v.reviewCount * 8),
       pricePerPerson: v.pricePerPerson,
       walkingMinutes: v.walkingMinutes ?? null,
     }));
@@ -217,7 +219,7 @@ async function runAgentGeneration(
 **절대 규칙 — 반드시 JSON으로 끝낸다**:
 - 마지막 답변은 아래 스키마에 맞는 JSON 하나만 담은 \`\`\`json 코드 블록 하나로 끝내라. 그 외 설명·중간 요약·산문 나열은 하지 말라.
 - 권한(WebFetch 등) 요청, 되묻기, "조사를 중단하겠습니다" 같은 보고성 응답은 절대 금지. 필요하면 WebSearch·WebFetch를 직접 써서 확인하라.
-- 일부 평점·리뷰 수가 불확실해도 절대 멈추지 말라. 확인한 수치를 우선 쓰되, 못 찾은 값은 신뢰할 만한 근사치로 채워 무조건 JSON을 완성한다. 완벽하지 않아도 된다.
+- 일부 평점·리뷰 수·조회수가 불확실해도 절대 멈추지 말라. 확인한 수치를 우선 쓰되, 못 찾은 값은 신뢰할 만한 근사치로 채워 무조건 JSON을 완성한다. 완벽하지 않아도 된다.
 
 스키마:
 ${META_JSON_SHAPE}`;

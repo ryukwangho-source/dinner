@@ -39,7 +39,7 @@ describe("/api/venues/generate", () => {
     expect(body.jobId).toBeTruthy();
   });
 
-  it("6시간 이내 캐시된 done job이 있으면 새로 만들지 않고 즉시 그 결과가 반환된다", async () => {
+  it("6시간 이내 캐시된 done job이 있으면 새로 만들지 않고 즉시 그 결과가 fromCache:true로 반환된다", async () => {
     const cached = store.create(["강남"], 8, 30000);
     store.markDone(cached.id, []);
 
@@ -50,6 +50,19 @@ describe("/api/venues/generate", () => {
     const body = await res.json();
     expect(body.jobId).toBe(cached.id);
     expect(body.status).toBe("done");
+    expect(body.fromCache).toBe(true);
+  });
+
+  it("force:true면 캐시된 done job이 있어도 새 job을 만들어 fromCache:false로 반환한다", async () => {
+    const cached = store.create(["강남"], 8, 30000);
+    store.markDone(cached.id, []);
+
+    const res = await generateVenuesRoute(
+      jsonRequest({ regions: ["강남"], partySize: 8, budgetPerPerson: 30000, force: true }),
+    );
+    const body = await res.json();
+    expect(body.jobId).not.toBe(cached.id);
+    expect(body.fromCache).toBe(false);
   });
 
   it("같은 조합으로 진행 중인 job이 있으면 새 job을 만들지 않고 기존 jobId를 반환한다", async () => {

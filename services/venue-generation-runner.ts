@@ -1,24 +1,33 @@
 import { generateVenues } from "@/services/venue-generator";
 import { getVenueJobStore, type VenueGenerationJob } from "@/services/venue-job-store";
 
+export interface StartGenerationResult {
+  job: VenueGenerationJob;
+  /** true면 이번 요청이 6시간 캐시를 그대로 재사용한 결과다 — 클라이언트가 "다시 검색할까요?"를 물어야 한다 */
+  fromCache: boolean;
+}
+
 /**
  * 생성 시작 — 순서대로 확인한다:
- * ① 6시간 이내 캐시된 완료 job이 있으면 그대로 반환 (재검색 없음)
- * ② 진행 중인(pending/running) job이 있으면 그 job을 그대로 반환 (새로고침으로 인한 중복 웹검색 방지)
- * ③ 둘 다 없으면 새 job을 만들고 fire-and-forget으로 백그라운드 생성을 시작한다
+ * ① force가 아니고 6시간 이내 캐시된 완료 job이 있으면 그대로 반환 (재검색 없음, fromCache:true)
+ * ② 진행 중인(pending/running) job이 있으면 그 job을 그대로 반환 (새로고침·재검색 중복 요청으로 인한 중복 웹검색 방지)
+ * ③ 둘 다 없으면(또는 force로 캐시를 건너뛰면) 새 job을 만들고 fire-and-forget으로 백그라운드 생성을 시작한다
  */
 export function startGeneration(
   regions: string[],
   partySize: number,
   budgetPerPerson: number,
-): VenueGenerationJob {
+  force = false,
+): StartGenerationResult {
   const store = getVenueJobStore();
 
-  const cached = store.findFresh(regions, partySize, budgetPerPerson);
-  if (cached) return cached;
+  if (!force) {
+    const cached = store.findFresh(regions, partySize, budgetPerPerson);
+    if (cached) return { job: cached, fromCache: true };
+  }
 
   const active = store.findActive(regions, partySize, budgetPerPerson);
-  if (active) return active;
+  if (active) return { job: active, fromCache: false };
 
   const job = store.create(regions, partySize, budgetPerPerson);
 
@@ -42,5 +51,5 @@ export function startGeneration(
     }
   });
 
-  return job;
+  return { job, fromCache: false };
 }

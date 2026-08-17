@@ -138,6 +138,20 @@ describe("toVenues", () => {
     ];
     expect(toVenues(raw, "강남")[0].walkingMinutes).toBeNull();
   });
+
+  it("조사된 viewCount가 있으면 그 값을 그대로 쓴다(리뷰수 근사치로 대체하지 않는다)", () => {
+    const raw = [
+      { name: "실조회수집", category: "고깃집", rating: 4.5, reviewCount: 100, viewCount: 15000, pricePerPerson: 25000, walkingMinutes: 5 },
+    ];
+    expect(toVenues(raw, "강남")[0].viewCount).toBe(15000);
+  });
+
+  it("viewCount를 못 찾았으면 리뷰수 기반 근사치로 대체한다", () => {
+    const raw = [
+      { name: "조회수없음", category: "고깃집", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: 5 },
+    ];
+    expect(toVenues(raw, "강남")[0].viewCount).toBe(800);
+  });
 });
 
 describe("generateVenues (직접 API 경로 — client 주입)", () => {
