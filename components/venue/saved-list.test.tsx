@@ -11,6 +11,7 @@ const items: SavedVenue[] = [
     name: "호프집 강남불빛",
     category: "호프",
     region: "강남역",
+    rating: 4.3,
     pricePerPerson: 22000,
     savedAt: "2026-08-12T00:10:00.000Z",
   },
@@ -20,6 +21,7 @@ const items: SavedVenue[] = [
     name: "숯불향 강남점",
     category: "고깃집",
     region: "강남역",
+    rating: 4.6,
     pricePerPerson: 28000,
     savedAt: "2026-08-12T00:05:00.000Z",
   },
@@ -39,6 +41,12 @@ describe("SavedList", () => {
   it("항목이 없으면 빈 상태 문구가 표시된다", () => {
     render(<SavedList items={[]} />);
     expect(screen.getByText("저장된 장소가 없어요")).toBeInTheDocument();
+  });
+
+  it("각 장소에 평점이 표시된다", () => {
+    render(<SavedList items={items} />);
+    expect(screen.getByText("호프 · 강남역 · ★ 4.3")).toBeInTheDocument();
+    expect(screen.getByText("고깃집 · 강남역 · ★ 4.6")).toBeInTheDocument();
   });
 
   it("각 장소에 네이버 지도에서 보기 링크가 있다", () => {

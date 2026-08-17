@@ -33,7 +33,7 @@ describe("savedVenueStore", () => {
   it("저장 레코드에는 저장자를 구분하는 필드가 없다", () => {
     const [saved] = store.saveMany([makeVenue("a")]);
     expect(Object.keys(saved).sort()).toEqual(
-      ["category", "id", "name", "pricePerPerson", "region", "savedAt", "venueId"].sort(),
+      ["category", "id", "name", "pricePerPerson", "rating", "region", "savedAt", "venueId"].sort(),
     );
   });
 

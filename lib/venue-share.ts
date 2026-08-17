@@ -13,7 +13,7 @@ export function buildShareText(results: RegionRecommendation[]): string {
       lines.push("1차");
       courseOne.forEach(({ venue }, i) => {
         lines.push(
-          `${i + 1}. ${venue.name} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
+          `${i + 1}. ${venue.name} ★${venue.rating} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
         );
         lines.push(naverMapSearchUrl(venue.name, venue.region));
       });
@@ -22,7 +22,7 @@ export function buildShareText(results: RegionRecommendation[]): string {
       lines.push("2차");
       courseTwo.forEach(({ venue }, i) => {
         lines.push(
-          `${i + 1}. ${venue.name} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
+          `${i + 1}. ${venue.name} ★${venue.rating} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
         );
         lines.push(naverMapSearchUrl(venue.name, venue.region));
       });

@@ -57,6 +57,15 @@ describe("buildShareText", () => {
     expect(text).toContain("1차");
     expect(text).toContain("2차");
   });
+
+  it("각 장소마다 평점이 함께 포함된다", () => {
+    const text = buildShareText(results);
+    for (const { courseOne, courseTwo } of results) {
+      for (const { venue } of [...courseOne, ...courseTwo]) {
+        expect(text).toContain(`★${venue.rating}`);
+      }
+    }
+  });
 });
 
 describe("shareVenues", () => {

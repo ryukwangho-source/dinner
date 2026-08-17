@@ -152,7 +152,7 @@ export function SavedList({ items: initialItems }: SavedListProps) {
                   </Button>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  {item.category} · {item.region}
+                  {item.category} · {item.region} · ★ {item.rating}
                 </div>
               </div>
             </CardContent>
