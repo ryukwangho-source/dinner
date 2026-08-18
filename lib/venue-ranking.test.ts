@@ -107,4 +107,18 @@ describe("pickDiverseTopN", () => {
   it("후보가 없으면 빈 배열을 반환한다", () => {
     expect(pickDiverseTopN([], 5)).toEqual([]);
   });
+
+  it("groupKey를 주면 업종이 달라도 같은 그룹이면 하나로 취급한다", () => {
+    const venues = [
+      makeVenue("고깃집-1등", { category: "고깃집", rating: 4.9 }),
+      makeVenue("찜-2등", { category: "찜", rating: 4.8 }),
+      makeVenue("일식-3등", { category: "일식", rating: 4.7 }),
+      makeVenue("중식-4등", { category: "중식", rating: 4.6 }),
+    ];
+    const ranked = sortVenueCandidates(venues, 30000);
+    const cuisineOf = (v: Venue) => (v.category === "고깃집" || v.category === "찜" ? "한식" : v.category);
+    const picked = pickDiverseTopN(ranked, 3, cuisineOf);
+    // 고깃집·찜이 둘 다 "한식"으로 묶이므로 순위가 가장 높은 고깃집만 남고, 나머지 슬롯은 일식·중식이 채운다
+    expect(picked.map((p) => p.venue.id)).toEqual(["고깃집-1등", "일식-3등", "중식-4등"]);
+  });
 });

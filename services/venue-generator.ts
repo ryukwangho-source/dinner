@@ -6,6 +6,7 @@ import {
   ALLOWED_CATEGORIES,
   CANDIDATE_COUNT,
   COURSE_ONE_CATEGORIES,
+  COURSE_ONE_CUISINE_OF,
   COURSE_TWO_CATEGORIES,
   GENERATION_MODEL,
   MAX_WALKING_MINUTES,
@@ -121,6 +122,11 @@ export function toVenues(raw: GeneratedVenue[], region: string): Venue[] {
 /** 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 후보만 남긴다. 도보 시간을 모르면(null) 제외한다 */
 export function filterWithinWalkingDistance(venues: Venue[]): Venue[] {
   return venues.filter((v) => v.walkingMinutes !== null && v.walkingMinutes <= MAX_WALKING_MINUTES);
+}
+
+/** 1차 세부 업종을 큰 분류(양식·한식·중식·일식)로 뭉친다 — pickDiverseTopN의 다양성 기준 */
+function cuisineOf(venue: Venue): string {
+  return COURSE_ONE_CUISINE_OF[venue.category as keyof typeof COURSE_ONE_CUISINE_OF] ?? venue.category;
 }
 
 /** 업종으로 1차(식사)·2차(술) 후보를 나눈다 */
@@ -296,8 +302,9 @@ function mergeUsage(usages: (GenerationUsage | null)[]): GenerationUsage | null 
 
 /**
  * 지역마다 회식 장소를 실시간 생성해, 요청 지역에서 도보 {@link MAX_WALKING_MINUTES}분 이내인 곳 중
- * 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다. 1차는 같은 업종이 몰리지 않도록
- * 업종을 최대한 다양하게 섞어 고른다(pickDiverseTopN) — 2차는 업종이 이자카야·호프 둘뿐이라 그대로 둔다.
+ * 1차(식사)·2차(간단한 술) 각각 상위 5곳을 반환한다. 1차는 큰 분류(양식·한식·중식·일식,
+ * COURSE_ONE_CUISINE_OF)가 최대한 겹치지 않도록 고른다(pickDiverseTopN + cuisineOf)
+ * — 2차는 업종이 이자카야·호프 둘뿐이라 그대로 둔다.
  * ANTHROPIC_API_KEY가 있으면 직접 API(web_search tool, 검색 횟수 상한 강제 + 구조화 출력),
  * 없으면 Agent SDK(구독 인증) 경로를 쓴다.
  * GENERATE_FIXTURE=1이면 실제 웹검색 없이 고정 fixture를 쓴다(테스트·E2E 전용, 비용 회피).
@@ -314,7 +321,7 @@ export async function generateVenues(
       const { courseOne, courseTwo } = splitByCourse(filterWithinWalkingDistance(candidates));
       return {
         region,
-        courseOne: pickDiverseTopN(sortVenueCandidates(courseOne, budgetPerPerson), TOP_N),
+        courseOne: pickDiverseTopN(sortVenueCandidates(courseOne, budgetPerPerson), TOP_N, cuisineOf),
         courseTwo: rankVenueCandidates(courseTwo, budgetPerPerson).slice(0, TOP_N),
         usage,
       };

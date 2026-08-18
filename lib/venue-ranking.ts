@@ -45,20 +45,27 @@ export function rankVenueCandidates(venues: Venue[], budgetPerPerson: number): R
 }
 
 /**
- * 이미 순위가 매겨진 후보에서 업종이 최대한 겹치지 않도록 상위 topN개를 고른다.
- * 1차로 순위 순서를 훑으며 업종별 최고 순위 후보를 하나씩 채우고(업종 다양성 우선),
- * 그래도 슬롯이 남으면(서로 다른 업종이 topN개보다 적을 때) 남은 후보를 원래 순위
+ * 이미 순위가 매겨진 후보에서 그룹(기본값: 업종)이 최대한 겹치지 않도록 상위 topN개를 고른다.
+ * 1차로 순위 순서를 훑으며 그룹별 최고 순위 후보를 하나씩 채우고(다양성 우선),
+ * 그래도 슬롯이 남으면(서로 다른 그룹이 topN개보다 적을 때) 남은 후보를 원래 순위
  * 그대로 채워 항상 topN개를 반환한다.
+ * groupKey로 세부 업종보다 더 큰 분류(예: 양식·한식·중식·일식) 기준으로 다양성을
+ * 맞출 수 있다 — 기본값은 venue.category 그대로다.
  */
-export function pickDiverseTopN(ranked: RankedVenue[], topN: number): RankedVenue[] {
+export function pickDiverseTopN(
+  ranked: RankedVenue[],
+  topN: number,
+  groupKey: (venue: Venue) => string = (venue) => venue.category,
+): RankedVenue[] {
   const picked: RankedVenue[] = [];
-  const usedCategories = new Set<string>();
+  const usedGroups = new Set<string>();
 
   for (const candidate of ranked) {
     if (picked.length >= topN) break;
-    if (usedCategories.has(candidate.venue.category)) continue;
+    const group = groupKey(candidate.venue);
+    if (usedGroups.has(group)) continue;
     picked.push(candidate);
-    usedCategories.add(candidate.venue.category);
+    usedGroups.add(group);
   }
 
   if (picked.length < topN) {

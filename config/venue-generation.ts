@@ -32,6 +32,23 @@ export const COURSE_ONE_CATEGORIES = [
 /** 2차(간단한 술 위주, 1차 이후 갈 만한 곳) 업종 */
 export const COURSE_TWO_CATEGORIES = ["이자카야", "호프"] as const;
 
+/**
+ * 1차 세부 업종 → 큰 분류(양식·한식·중식·일식) 매핑.
+ * 조사·표시에는 세부 업종을 그대로 쓰되, 1차 상위 5곳을 고를 때는 이 큰 분류
+ * 기준으로 다양성을 맞춘다 — 고깃집·해물·찜·곱창·횟집이 전부 "한식"에 몰려도
+ * 한 카테고리로 취급해 양식·중식·일식과 고르게 섞이게 한다.
+ */
+export const COURSE_ONE_CUISINE_OF: Record<(typeof COURSE_ONE_CATEGORIES)[number], string> = {
+  고깃집: "한식",
+  일식: "일식",
+  해물: "한식",
+  찜: "한식",
+  양식: "양식",
+  곱창: "한식",
+  중식: "중식",
+  횟집: "한식",
+};
+
 /** 회식에 어울리는 업종 화이트리스트 전체 — 카페·편의점 등 회식과 무관한 곳을 걸러낸다 */
 export const ALLOWED_CATEGORIES = [...COURSE_ONE_CATEGORIES, ...COURSE_TWO_CATEGORIES] as const;
 

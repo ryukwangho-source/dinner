@@ -228,20 +228,26 @@ describe("generateVenues — 1차 업종 다양성", () => {
     } as unknown as Anthropic;
   }
 
-  it("서로 다른 업종이 5개 이상이면 1차 결과 5곳의 업종이 겹치지 않는다", async () => {
-    const client = fakeClient(["고깃집", "고깃집", "일식", "중식", "양식", "횟집", "곱창"]);
+  it("세부 업종이 달라도 같은 큰 분류(한식)면 1곳만 남기고, 양식·한식·중식·일식이 고르게 섞인다", async () => {
+    // 고깃집·해물·찜·곱창·횟집은 전부 한식으로 묶인다 (COURSE_ONE_CUISINE_OF)
+    const client = fakeClient(["고깃집", "해물", "찜", "곱창", "횟집", "일식", "중식", "양식"]);
     const { results } = await generateVenues(["강남"], 8, 30000, client);
-    const categories = results[0].courseOne.map((r) => r.venue.category);
-    expect(categories).toHaveLength(5);
-    expect(new Set(categories).size).toBe(5);
+    const { courseOne } = results[0];
+    expect(courseOne).toHaveLength(5);
+    expect(courseOne.filter((r) => r.venue.category === "고깃집")).toHaveLength(1);
+    expect(courseOne.map((r) => r.venue.category)).toContain("일식");
+    expect(courseOne.map((r) => r.venue.category)).toContain("중식");
+    expect(courseOne.map((r) => r.venue.category)).toContain("양식");
   });
 
-  it("서로 다른 업종이 5개 미만이면 남은 슬롯은 순위 순서대로 같은 업종으로 채운다", async () => {
-    const client = fakeClient(["고깃집", "고깃집", "고깃집", "일식", "중식"]);
+  it("큰 분류가 5개 미만이면 남은 슬롯은 순위 순서대로 채운다(같은 분류라도 포함될 수 있다)", async () => {
+    const client = fakeClient(["고깃집", "해물", "찜", "일식", "중식"]);
     const { results } = await generateVenues(["강남"], 8, 30000, client);
-    const categories = results[0].courseOne.map((r) => r.venue.category);
-    expect(categories).toHaveLength(5);
-    expect(new Set(categories)).toEqual(new Set(["고깃집", "일식", "중식"]));
+    const { courseOne } = results[0];
+    expect(courseOne).toHaveLength(5);
+    // 한식(고깃집·해물·찜)·일식·중식 = 큰 분류 3개뿐이므로, 상위 3곳(한식 1 + 일식 + 중식)을 채운 뒤
+    // 남은 2슬롯은 순위 그대로 나머지 한식 후보(해물·찜)로 채워진다
+    expect(courseOne.map((r) => r.venue.category)).toEqual(["고깃집", "일식", "중식", "해물", "찜"]);
   });
 });
 
