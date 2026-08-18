@@ -37,6 +37,9 @@ describe("voteStore", () => {
       venueId: "osan-charcoal",
       name: "숯불향 오산역점",
       region: "오산역",
+      rating: 4.5,
+      reviewCount: 100,
+      viewCount: 1000,
       pricePerPerson: 28000,
     });
   });

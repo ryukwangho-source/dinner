@@ -55,6 +55,13 @@ describe("CreateVoteForm", () => {
     }
   });
 
+  it("각 후보에 평점·리뷰수·조회수가 표시된다", () => {
+    render(<CreateVoteForm candidates={candidates} />);
+    expect(screen.getAllByText("★ 4.5")).toHaveLength(3);
+    expect(screen.getAllByText(/리뷰 100/)).toHaveLength(3);
+    expect(screen.getAllByText(/조회 1.0k/)).toHaveLength(3);
+  });
+
   it("각 후보에 네이버 지도에서 보기 링크가 있다", () => {
     render(<CreateVoteForm candidates={candidates} />);
     const links = screen.getAllByRole("link", { name: "네이버 지도에서 보기" });

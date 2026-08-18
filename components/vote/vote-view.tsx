@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { getDeviceId } from "@/lib/device-id";
+import { formatCount } from "@/lib/format-count";
 import { formatDeadline, formatRemaining } from "@/lib/format-remaining";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { VoteDetail } from "@/types/vote";
@@ -144,6 +145,13 @@ export function VoteView({ voteId }: VoteViewProps) {
                   </Button>
                 </span>
                 <span className="text-xs font-bold">{candidate.voteCount}표</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>★ {candidate.rating}</span>
+                <span>·</span>
+                <span>리뷰 {candidate.reviewCount.toLocaleString("ko-KR")}</span>
+                <span>·</span>
+                <span>조회 {formatCount(candidate.viewCount)}</span>
               </div>
               <Progress value={totalVotes > 0 ? (candidate.voteCount / totalVotes) * 100 : 0} />
             </CardContent>

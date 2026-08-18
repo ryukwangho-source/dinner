@@ -5,6 +5,9 @@ export interface VoteCandidate {
   venueId: string;
   name: string;
   region: string;
+  rating: number;
+  reviewCount: number;
+  viewCount: number;
   pricePerPerson: number;
 }
 

@@ -18,6 +18,9 @@ interface VoteCandidateRow {
   venue_id: string;
   name: string;
   region: string;
+  rating: number;
+  review_count: number;
+  view_count: number;
   price_per_person: number;
 }
 
@@ -52,6 +55,9 @@ export function createVoteStore(dbPath: string) {
       venue_id TEXT NOT NULL,
       name TEXT NOT NULL,
       region TEXT NOT NULL,
+      rating REAL NOT NULL DEFAULT 0,
+      review_count INTEGER NOT NULL DEFAULT 0,
+      view_count INTEGER NOT NULL DEFAULT 0,
       price_per_person INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS vote_submissions (
@@ -62,12 +68,28 @@ export function createVoteStore(dbPath: string) {
       PRIMARY KEY (vote_id, device_id)
     );
   `);
+  // 기존 DB에는 rating·review_count·view_count 컬럼이 없을 수 있다 — CREATE TABLE
+  // IF NOT EXISTS는 이미 있는 테이블에 컬럼을 추가하지 않으므로 직접 확인 후 붙인다.
+  const candidateColumns = new Set(
+    (db.prepare("PRAGMA table_info(vote_candidates)").all() as { name: string }[]).map(
+      (c) => c.name,
+    ),
+  );
+  if (!candidateColumns.has("rating")) {
+    db.exec("ALTER TABLE vote_candidates ADD COLUMN rating REAL NOT NULL DEFAULT 0");
+  }
+  if (!candidateColumns.has("review_count")) {
+    db.exec("ALTER TABLE vote_candidates ADD COLUMN review_count INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!candidateColumns.has("view_count")) {
+    db.exec("ALTER TABLE vote_candidates ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0");
+  }
 
   const insertVote = db.prepare(
     "INSERT INTO votes (id, deadline_at, created_at) VALUES (?, ?, ?)",
   );
   const insertCandidate = db.prepare(
-    "INSERT INTO vote_candidates (id, vote_id, venue_id, name, region, price_per_person) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO vote_candidates (id, vote_id, venue_id, name, region, rating, review_count, view_count, price_per_person) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
   );
   const upsertSubmission = db.prepare(`
     INSERT INTO vote_submissions (vote_id, device_id, selected_candidate_ids, submitted_at)
@@ -108,6 +130,9 @@ export function createVoteStore(dbPath: string) {
             venue.id,
             venue.name,
             venue.region,
+            venue.rating,
+            venue.reviewCount,
+            venue.viewCount,
             venue.pricePerPerson,
           );
         }
@@ -148,6 +173,9 @@ export function createVoteStore(dbPath: string) {
           venueId: c.venue_id,
           name: c.name,
           region: c.region,
+          rating: c.rating,
+          reviewCount: c.review_count,
+          viewCount: c.view_count,
           pricePerPerson: c.price_per_person,
           voteCount: tally.get(c.id) ?? 0,
         })),

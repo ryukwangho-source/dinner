@@ -5,13 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatCount } from "@/lib/format-count";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { Venue } from "@/types/recommendation";
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return n.toLocaleString("ko-KR");
-}
 
 export interface VenueCardProps {
   venue: Venue;

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { formatCount } from "@/lib/format-count";
 import { copyVoteLink, shareVoteLink } from "@/lib/venue-share";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { Venue } from "@/types/recommendation";
@@ -102,23 +103,32 @@ export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
         <CardContent className="flex flex-col gap-2">
           <div className="text-xs font-bold text-muted-foreground">후보</div>
           {candidates.map((venue) => (
-            <div key={venue.id} className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-1">
-                {venue.name}
-                <Button variant="ghost" size="icon-xs" asChild>
-                  <a
-                    href={naverMapSearchUrl(venue.name, venue.region)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="네이버 지도에서 보기"
-                  >
-                    <MapPinIcon />
-                  </a>
-                </Button>
-              </span>
-              <span className="text-xs text-muted-foreground">
-                1인 {venue.pricePerPerson.toLocaleString("ko-KR")}원
-              </span>
+            <div key={venue.id} className="flex flex-col gap-0.5 border-b pb-2 last:border-b-0 last:pb-0">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-1">
+                  {venue.name}
+                  <Button variant="ghost" size="icon-xs" asChild>
+                    <a
+                      href={naverMapSearchUrl(venue.name, venue.region)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="네이버 지도에서 보기"
+                    >
+                      <MapPinIcon />
+                    </a>
+                  </Button>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  1인 {venue.pricePerPerson.toLocaleString("ko-KR")}원
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>★ {venue.rating}</span>
+                <span>·</span>
+                <span>리뷰 {venue.reviewCount.toLocaleString("ko-KR")}</span>
+                <span>·</span>
+                <span>조회 {formatCount(venue.viewCount)}</span>
+              </div>
             </div>
           ))}
         </CardContent>
