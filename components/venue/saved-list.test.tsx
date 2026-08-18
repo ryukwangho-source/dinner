@@ -46,7 +46,7 @@ describe("SavedList", () => {
   it("각 장소에 평점이 표시된다", () => {
     render(<SavedList items={items} />);
     expect(screen.getByText("호프 · 강남역 · ★ 4.3")).toBeInTheDocument();
-    expect(screen.getByText("고깃집 · 강남역 · ★ 4.6")).toBeInTheDocument();
+    expect(screen.getByText("한식(고깃집) · 강남역 · ★ 4.6")).toBeInTheDocument();
   });
 
   it("각 장소에 네이버 지도에서 보기 링크가 있다", () => {

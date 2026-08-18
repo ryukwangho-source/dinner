@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCount } from "@/lib/format-count";
+import { formatCategoryLabel } from "@/lib/venue-category-label";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { Venue } from "@/types/recommendation";
 
@@ -61,7 +62,7 @@ export function VenueCard({ venue, withinBudget, checked, onCheckedChange, onDis
             </span>
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
-            {venue.category} · {venue.region}
+            {formatCategoryLabel(venue.category)} · {venue.region}
             {venue.walkingMinutes != null && ` · 도보 ${venue.walkingMinutes}분`}
           </div>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">

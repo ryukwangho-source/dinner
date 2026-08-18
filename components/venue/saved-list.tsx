@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { BookmarkIcon, MapPinIcon } from "lucide-react";
+import { formatCategoryLabel } from "@/lib/venue-category-label";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
 import type { SavedVenue } from "@/services/saved-venue-store";
 
@@ -152,7 +153,7 @@ export function SavedList({ items: initialItems }: SavedListProps) {
                   </Button>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  {item.category} · {item.region} · ★ {item.rating}
+                  {formatCategoryLabel(item.category)} · {item.region} · ★ {item.rating}
                 </div>
               </div>
             </CardContent>
