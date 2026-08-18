@@ -74,6 +74,9 @@ export function VenueCard({ venue, withinBudget, checked, onCheckedChange, onDis
             <span>·</span>
             <span>조회 {formatCount(venue.viewCount)}</span>
           </div>
+          <div className="text-[10px] text-muted-foreground/70">
+            네이버 플레이스 등 웹검색 기준(정확한 값이 없으면 추정치)
+          </div>
           <div className="mt-1 text-xs font-bold">
             1인 {venue.pricePerPerson.toLocaleString("ko-KR")}원
           </div>

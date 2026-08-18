@@ -27,6 +27,11 @@ describe("VenueCard", () => {
     expect(screen.getByText(/28,000/)).toBeInTheDocument();
   });
 
+  it("평점·리뷰·조회수의 출처 안내 문구를 표시한다", () => {
+    render(<VenueCard venue={venue} withinBudget checked={false} onCheckedChange={() => {}} />);
+    expect(screen.getByText(/네이버 플레이스 등 웹검색 기준/)).toBeInTheDocument();
+  });
+
   it("withinBudget=false이면 예산 초과 배지가 보인다", () => {
     render(<VenueCard venue={venue} withinBudget={false} checked={false} onCheckedChange={() => {}} />);
     expect(screen.getByText("예산 초과")).toBeInTheDocument();
