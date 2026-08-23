@@ -109,7 +109,7 @@ export function CreateVoteForm({ candidates }: CreateVoteFormProps) {
                   {venue.name}
                   <Button variant="ghost" size="icon-xs" asChild>
                     <a
-                      href={naverMapSearchUrl(venue.name, venue.region)}
+                      href={naverMapSearchUrl(venue.name)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="네이버 지도에서 보기"

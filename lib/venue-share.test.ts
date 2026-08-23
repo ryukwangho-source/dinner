@@ -46,7 +46,7 @@ describe("buildShareText", () => {
     const text = buildShareText(results);
     for (const { courseOne, courseTwo } of results) {
       for (const { venue } of [...courseOne, ...courseTwo]) {
-        expect(text).toContain(naverMapSearchUrl(venue.name, venue.region));
+        expect(text).toContain(naverMapSearchUrl(venue.name));
       }
     }
   });

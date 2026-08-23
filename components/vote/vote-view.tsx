@@ -135,7 +135,7 @@ export function VoteView({ voteId }: VoteViewProps) {
                   {candidate.name}
                   <Button variant="ghost" size="icon-xs" asChild>
                     <a
-                      href={naverMapSearchUrl(candidate.name, candidate.region)}
+                      href={naverMapSearchUrl(candidate.name)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="네이버 지도에서 보기"

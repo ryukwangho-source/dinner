@@ -15,7 +15,7 @@ export function buildShareText(results: RegionRecommendation[]): string {
         lines.push(
           `${i + 1}. ${venue.name} ★${venue.rating} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
         );
-        lines.push(naverMapSearchUrl(venue.name, venue.region));
+        lines.push(naverMapSearchUrl(venue.name));
       });
     }
     if (courseTwo.length > 0) {
@@ -24,7 +24,7 @@ export function buildShareText(results: RegionRecommendation[]): string {
         lines.push(
           `${i + 1}. ${venue.name} ★${venue.rating} (1인 ${venue.pricePerPerson.toLocaleString("ko-KR")}원)`,
         );
-        lines.push(naverMapSearchUrl(venue.name, venue.region));
+        lines.push(naverMapSearchUrl(venue.name));
       });
     }
   }

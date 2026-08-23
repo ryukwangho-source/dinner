@@ -143,7 +143,7 @@ export function SavedList({ items: initialItems }: SavedListProps) {
                   </div>
                   <Button variant="ghost" size="icon-xs" asChild>
                     <a
-                      href={naverMapSearchUrl(item.name, item.region)}
+                      href={naverMapSearchUrl(item.name)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="네이버 지도에서 보기"
