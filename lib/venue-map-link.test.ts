@@ -17,4 +17,10 @@ describe("naverMapSearchUrl", () => {
     expect(url).toContain(encodeURIComponent("한우마당 동탄"));
     expect(url).not.toContain(encodeURIComponent("동탄역 한우마당 동탄"));
   });
+
+  it("지역이 역명이 아니라 지번·도로명 주소면 주소를 붙이지 않고 장소명만 검색한다", () => {
+    // 지번 주소(숫자 포함)를 그대로 붙이면 네이버 지도가 장소명 대신 그 주소로 매칭해버린다
+    const url = naverMapSearchUrl("알부자 강남역점", "김포시 마산동 667-5");
+    expect(url).toBe(`https://map.naver.com/p/search/${encodeURIComponent("알부자 강남역점")}`);
+  });
 });
