@@ -98,7 +98,6 @@ export function VenueResultsFlow(props: VenueResultsFlowProps) {
       if (!res.ok) throw new Error(`generate failed: ${res.status}`);
       return (await res.json()) as { jobId: string; status: string; fromCache: boolean };
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [props, partySize, budgetPerPerson],
   );
 

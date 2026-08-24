@@ -178,14 +178,14 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
 
 ---
 
-### Checkpoint: Tasks 1-5 이후
-- [ ] 모든 테스트 통과: `bun run test`
-- [ ] 빌드 성공: `bun run build`
-- [ ] `GENERATE_FIXTURE=1` 환경에서 홈 "1차 장소 직접 입력" → 로딩 → 1차 1곳+2차 5곳 결과 → 저장/투표까지 end-to-end 동작 (기존 저장·투표·공유 컴포넌트는 변경 없이 그대로 재사용되므로 회귀 여부만 확인)
+### Checkpoint: Tasks 1-5 이후 ✅
+- [x] 모든 테스트 통과: `bun run test` (252/252)
+- [x] 빌드 성공: `bun run build`
+- [x] `GENERATE_FIXTURE=1` 환경에서 홈 "1차 장소 직접 입력" → 로딩(캐시 있어 다이얼로그) → 1차 1곳+2차 5곳 결과까지 end-to-end 동작 확인. 저장/투표 자체 클릭 검증은 Task 6 E2E로 이월
 
 ---
 
-### Task 6: E2E 골든 패스
+### Task 6: E2E 골든 패스 ✅
 
 - **담당 시나리오**: 전체 happy path (Scenario 1, 2, 6 통합)
 - **크기**: S (1 파일)
@@ -193,10 +193,10 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
 - **구현 대상**:
   - `e2e/venue-manual-course-one.spec.ts`
 - **수용 기준**:
-  - [ ] `GENERATE_FIXTURE=1` 환경에서 홈 화면 → "1차 장소 직접 입력" 탭 전환 → 장소명·인원·예산 입력 → 추천받기 → 로딩 화면 → 1차 1곳+2차 5곳 결과 → 2차 카드 2곳 선택 저장까지 브라우저에서 실제로 동작한다 (spec 시나리오 6 성공 기준 1)
-  - [ ] 결과 화면에서 카드들로 카톡 공유(클립보드 복사 폴백 포함) → 복사된 텍스트에 1차·2차 장소 이름이 모두 포함된다 (spec 시나리오 6 성공 기준 2)
-  - [ ] 결과 화면에서 카드 일부를 후보로 투표 만들기 → 투표 화면(`/vote/[id]`)에 그 후보들이 정상 등록되고, 하나를 선택해 투표하면 득표수가 반영된다 (spec 시나리오 6 성공 기준 3)
-- **검증**: `bun run test:e2e`
+  - [x] `GENERATE_FIXTURE=1` 환경에서 홈 화면 → "1차 장소 직접 입력" 탭 전환 → 장소명·인원·예산 입력 → 추천받기 → 로딩 화면 → 1차 1곳+2차 5곳 결과 → 2차 카드 2곳 선택 저장까지 브라우저에서 실제로 동작한다 (spec 시나리오 6 성공 기준 1)
+  - [x] 결과 화면에서 카드들로 카톡 공유(클립보드 복사 폴백 포함) → 복사된 텍스트에 1차·2차 장소 이름이 모두 포함된다 (spec 시나리오 6 성공 기준 2)
+  - [x] 결과 화면에서 카드 일부를 후보로 투표 만들기 → 투표 화면(`/vote/[id]`)에 그 후보들이 정상 등록되고, 하나를 선택해 투표하면 득표수가 반영된다 (spec 시나리오 6 성공 기준 3)
+- **검증**: `bun run test:e2e -- venue-manual-course-one` — 통과 (1/1). 전체 `bun run test:e2e` 스위트에서 무관한 기존 파일(`venue-vote.spec.ts`)의 지역명 캐시 충돌 버그를 발견했으나 이번 feature와 무관해 별도 task로 분리(learnings.md 참고)
 
 ---
 

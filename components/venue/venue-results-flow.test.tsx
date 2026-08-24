@@ -227,7 +227,7 @@ describe("VenueResultsFlow — mode: manual (1차 장소 직접 입력)", () => 
   });
 
   it("place를 POST body에 mode:manual로 실어 보낸다", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ({
+    const fetchMock = vi.fn(async () => ({
       ok: true,
       status: 202,
       json: async () => ({ jobId: "job-manual", status: "pending" }),
