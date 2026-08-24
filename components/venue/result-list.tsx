@@ -101,7 +101,11 @@ export function ResultList({
   }
 
   async function handleShare() {
-    const result = await shareVenues(visibleResults);
+    if (selected.size === 0) {
+      toast.error("공유할 장소를 선택해주세요");
+      return;
+    }
+    const result = await shareVenues(selectedVenues());
     if (result === "copied") toast.success("클립보드에 복사했어요");
     if (result === "failed") toast.error("공유에 실패했어요");
   }

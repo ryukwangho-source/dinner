@@ -148,13 +148,25 @@ describe("ResultList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("카톡 공유 클릭 → 결과 목록으로 shareVenues를 호출하고, 클립보드 복사 결과면 완료 토스트를 띄운다", async () => {
-    vi.mocked(shareVenues).mockResolvedValue("copied");
+  it("선택 없이 카톡 공유 클릭 → 안내 토스트가 뜨고 shareVenues는 호출되지 않는다", async () => {
     const user = userEvent.setup();
     renderList();
     await user.click(screen.getByRole("button", { name: "카톡 공유" }));
 
-    expect(shareVenues).toHaveBeenCalledWith(oneRegionResults);
+    expect(toast.error).toHaveBeenCalledWith("공유할 장소를 선택해주세요");
+    expect(shareVenues).not.toHaveBeenCalled();
+  });
+
+  it("선택한 장소만 카톡 공유로 전달하고, 클립보드 복사 결과면 완료 토스트를 띄운다", async () => {
+    vi.mocked(shareVenues).mockResolvedValue("copied");
+    const user = userEvent.setup();
+    renderList();
+    const [a] = allVenues(oneRegionResults);
+
+    await user.click(screen.getAllByRole("checkbox")[0]);
+    await user.click(screen.getByRole("button", { name: "카톡 공유" }));
+
+    expect(shareVenues).toHaveBeenCalledWith([a.venue]);
     expect(toast.success).toHaveBeenCalledWith("클립보드에 복사했어요");
   });
 
@@ -162,6 +174,7 @@ describe("ResultList", () => {
     vi.mocked(shareVenues).mockResolvedValue("shared");
     const user = userEvent.setup();
     renderList();
+    await user.click(screen.getAllByRole("checkbox")[0]);
     await user.click(screen.getByRole("button", { name: "카톡 공유" }));
 
     expect(toast.success).not.toHaveBeenCalled();
@@ -307,19 +320,22 @@ describe("ResultList", () => {
     expect(screen.getByText("0곳 선택됨")).toBeInTheDocument();
   });
 
-  it("삭제한 장소는 카톡 공유·선택 저장 대상에서도 제외된다", async () => {
+  it("선택했던 장소를 삭제하면 그 장소는 카톡 공유 대상에서도 빠진다", async () => {
     vi.mocked(shareVenues).mockResolvedValue("copied");
     const user = userEvent.setup();
     renderList();
     const [a, b] = allVenues(oneRegionResults);
 
+    const checkboxes = screen.getAllByRole("checkbox");
+    await user.click(checkboxes[0]); // a 선택
+    await user.click(checkboxes[1]); // b 선택
     await user.click(screen.getByRole("button", { name: `${a.venue.name} 삭제` }));
     await user.click(screen.getByRole("button", { name: "카톡 공유" }));
 
-    const [calledResults] = vi.mocked(shareVenues).mock.calls[0];
-    const remainingIds = calledResults.flatMap((r) => [...r.courseOne, ...r.courseTwo]).map((r) => r.venue.id);
-    expect(remainingIds).not.toContain(a.venue.id);
-    expect(remainingIds).toContain(b.venue.id);
+    const [calledVenues] = vi.mocked(shareVenues).mock.calls[0];
+    const sharedIds = calledVenues.map((v) => v.id);
+    expect(sharedIds).not.toContain(a.venue.id);
+    expect(sharedIds).toContain(b.venue.id);
   });
 
   it("진행 중인 투표 목록을 함께 렌더한다", () => {

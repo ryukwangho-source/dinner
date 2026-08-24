@@ -37,13 +37,14 @@ test("1차 장소 직접 입력(GENERATE_FIXTURE) → 로딩 → 1차 1곳+2차 
   await page.getByRole("button", { name: "선택 저장" }).click();
   await expect(page.getByText("2곳을 저장했어요")).toBeVisible();
 
-  // 카톡 공유 — 클립보드에 1차·2차 장소 이름이 모두 담긴다
+  // 카톡 공유 — 선택된(오뎅오색·호프집 온기) 장소만 클립보드에 담기고, 나머지는 빠진다
   await page.getByRole("button", { name: "카톡 공유" }).click();
   await expect(page.getByText("클립보드에 복사했어요")).toBeVisible();
   const shareText = await page.evaluate(() => navigator.clipboard.readText());
-  expect(shareText).toContain("브리비트 강남역점");
-  for (const name of ["오뎅오색", "호프집 온기", "생활맥주", "야키토리 나루토", "이자카야 나무"]) {
-    expect(shareText).toContain(name);
+  expect(shareText).toContain("오뎅오색");
+  expect(shareText).toContain("호프집 온기");
+  for (const name of ["브리비트 강남역점", "생활맥주", "야키토리 나루토", "이자카야 나무"]) {
+    expect(shareText).not.toContain(name);
   }
 
   // 투표 만들기 — 후보 등록·득표까지

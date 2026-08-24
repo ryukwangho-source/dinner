@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildShareText, copyVoteLink, shareVenues, shareVoteLink } from "@/lib/venue-share";
 import { naverMapSearchUrl } from "@/lib/venue-map-link";
-import type { RegionRecommendation } from "@/types/recommendation";
+import type { Venue } from "@/types/recommendation";
 
-function makeVenue(id: string, name: string, price: number, region = "강남역") {
+function makeVenue(id: string, name: string, price: number, region = "강남역"): Venue {
   return {
     id,
     name,
@@ -17,54 +17,37 @@ function makeVenue(id: string, name: string, price: number, region = "강남역"
   };
 }
 
-const results: RegionRecommendation[] = [
-  {
-    region: "강남역",
-    courseOne: [
-      { venue: makeVenue("a", "숯불향 강남점", 28000), withinBudget: true },
-      { venue: makeVenue("c", "모던삼겹 강남", 27000), withinBudget: true },
-      { venue: makeVenue("d", "오마카세 결", 42000), withinBudget: false },
-    ],
-    courseTwo: [
-      { venue: makeVenue("b", "이자카야 온기", 29500), withinBudget: true },
-      { venue: makeVenue("e", "호프집 강남불빛", 22000), withinBudget: true },
-    ],
-  },
+const venues: Venue[] = [
+  makeVenue("a", "숯불향 강남점", 28000),
+  makeVenue("b", "이자카야 온기", 29500),
 ];
 
 describe("buildShareText", () => {
   it("모든 장소 이름이 포함된다", () => {
-    const text = buildShareText(results);
-    for (const { courseOne, courseTwo } of results) {
-      for (const { venue } of [...courseOne, ...courseTwo]) {
-        expect(text).toContain(venue.name);
-      }
+    const text = buildShareText(venues);
+    for (const venue of venues) {
+      expect(text).toContain(venue.name);
     }
   });
 
   it("각 장소마다 네이버 검색 링크가 함께 포함된다", () => {
-    const text = buildShareText(results);
-    for (const { courseOne, courseTwo } of results) {
-      for (const { venue } of [...courseOne, ...courseTwo]) {
-        expect(text).toContain(naverMapSearchUrl(venue.name));
-      }
+    const text = buildShareText(venues);
+    for (const venue of venues) {
+      expect(text).toContain(naverMapSearchUrl(venue.name));
     }
-  });
-
-  it("지역명과 1차·2차 구분 라벨이 포함된다", () => {
-    const text = buildShareText(results);
-    expect(text).toContain("[강남역]");
-    expect(text).toContain("1차");
-    expect(text).toContain("2차");
   });
 
   it("각 장소마다 평점이 함께 포함된다", () => {
-    const text = buildShareText(results);
-    for (const { courseOne, courseTwo } of results) {
-      for (const { venue } of [...courseOne, ...courseTwo]) {
-        expect(text).toContain(`★${venue.rating}`);
-      }
+    const text = buildShareText(venues);
+    for (const venue of venues) {
+      expect(text).toContain(`★${venue.rating}`);
     }
+  });
+
+  it("선택하지 않은 장소는 포함되지 않는다", () => {
+    const text = buildShareText([venues[0]]);
+    expect(text).toContain(venues[0].name);
+    expect(text).not.toContain(venues[1].name);
   });
 });
 
@@ -76,7 +59,7 @@ describe("shareVenues", () => {
   it("navigator.share가 있으면 호출된다", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { share });
-    const result = await shareVenues(results);
+    const result = await shareVenues(venues);
     expect(share).toHaveBeenCalled();
     expect(result).toBe("shared");
   });
@@ -84,7 +67,7 @@ describe("shareVenues", () => {
   it("navigator.share가 없으면 클립보드에 복사된다", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
-    const result = await shareVenues(results);
+    const result = await shareVenues(venues);
     expect(writeText).toHaveBeenCalled();
     expect(result).toBe("copied");
   });
