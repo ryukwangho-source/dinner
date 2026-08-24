@@ -51,6 +51,7 @@ export function VenueResultsFlow(props: VenueResultsFlowProps) {
   const regions = props.mode === "manual" ? [props.place] : props.regions;
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingJobId = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -58,6 +59,7 @@ export function VenueResultsFlow(props: VenueResultsFlowProps) {
   }, []);
 
   const poll = useCallback(async function poll(jobId: string) {
+    pollingJobId.current = jobId;
     let res: Response;
     try {
       res = await fetch(`/api/venues/generate/${jobId}`);
@@ -71,6 +73,7 @@ export function VenueResultsFlow(props: VenueResultsFlowProps) {
     }
     const data = await res.json();
     if (data.status === "done") {
+      pollingJobId.current = null;
       setPhase({
         kind: "done",
         results: data.result ?? [],
@@ -78,6 +81,7 @@ export function VenueResultsFlow(props: VenueResultsFlowProps) {
         durationMs: data.durationMs ?? null,
       });
     } else if (data.status === "error") {
+      pollingJobId.current = null;
       setPhase({ kind: "error" });
     } else {
       timer.current = setTimeout(() => poll(jobId), POLL_MS);
@@ -144,6 +148,20 @@ export function VenueResultsFlow(props: VenueResultsFlowProps) {
     start();
     return stopPolling;
   }, [start, stopPolling]);
+
+  useEffect(() => {
+    // 브라우저가 백그라운드 탭의 setTimeout을 늦추거나 멈추는 경우가 있어, 대기 중이던
+    // 결과가 나와도 탭을 다시 볼 때까지 화면이 안 바뀔 수 있다. 탭이 다시 보이는 순간
+    // 다음 폴링 주기를 기다리지 않고 즉시 한 번 확인한다.
+    function handleVisibilityChange() {
+      if (document.visibilityState !== "visible") return;
+      if (!pollingJobId.current) return;
+      stopPolling();
+      poll(pollingJobId.current);
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [poll, stopPolling]);
 
   switch (phase.kind) {
     case "loading":

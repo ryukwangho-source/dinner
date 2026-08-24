@@ -181,6 +181,21 @@ describe("VenueResultsFlow", () => {
     expect(await screen.findByTestId("result-list")).toBeInTheDocument();
   });
 
+  it("탭이 백그라운드였다가 다시 보이면 폴링 주기(3초)를 기다리지 않고 즉시 확인한다", async () => {
+    const state = mockServer("pending");
+    render(
+      <VenueResultsFlow regions={["강남"]} partySize={8} budgetPerPerson={30000} votes={votes} />,
+    );
+    await vi.advanceTimersByTimeAsync(0); // 최초 poll이 pending으로 끝나 다음 3초를 기다리는 상태
+
+    state.status = "done";
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // 3초를 기다리지 않고도 결과가 보여야 한다
+    expect(await screen.findByTestId("result-list")).toBeInTheDocument();
+  });
+
   it("생성 실패로 끝나면 실패 안내와 다시 시도 버튼이 보인다", async () => {
     const state = mockServer("pending");
     render(
