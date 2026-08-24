@@ -82,4 +82,50 @@ describe("RecommendForm", () => {
       "/saved",
     );
   });
+
+  it("첫 진입 시 지역으로 찾기 모드가 기본이고 지역 입력 필드가 보인다", () => {
+    render(<RecommendForm />);
+    expect(screen.getByRole("radio", { name: "지역으로 찾기" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByLabelText("지역")).toBeInTheDocument();
+    expect(screen.queryByLabelText("1차 장소명")).not.toBeInTheDocument();
+  });
+
+  it("1차 장소 직접 입력 탭을 클릭하면 지역 입력 대신 1차 장소명 필드가 보인다", async () => {
+    const user = userEvent.setup();
+    render(<RecommendForm />);
+
+    await user.click(screen.getByRole("radio", { name: "1차 장소 직접 입력" }));
+
+    expect(screen.queryByLabelText("지역")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("1차 장소명")).toBeInTheDocument();
+  });
+
+  it("1차 장소명·인원수·예산을 입력하고 제출하면 place 쿼리로 결과 화면으로 이동한다", async () => {
+    const user = userEvent.setup();
+    render(<RecommendForm />);
+
+    await user.click(screen.getByRole("radio", { name: "1차 장소 직접 입력" }));
+    await user.type(screen.getByLabelText("1차 장소명"), "브리비트 강남역점");
+    await user.type(screen.getByLabelText("인원수"), "8");
+    await user.type(screen.getByLabelText("인원당 가용예산"), "30000");
+    await user.click(screen.getByRole("button", { name: "추천받기" }));
+
+    expect(pushMock).toHaveBeenCalledWith(
+      `/results?${new URLSearchParams({ place: "브리비트 강남역점", people: "8", budget: "30000" }).toString()}`,
+    );
+  });
+
+  it("1차 장소명을 비운 채 추천받기를 누르면 입력해주세요 안내가 표시되고 이동하지 않는다", async () => {
+    const user = userEvent.setup();
+    render(<RecommendForm />);
+
+    await user.click(screen.getByRole("radio", { name: "1차 장소 직접 입력" }));
+    await user.click(screen.getByRole("button", { name: "추천받기" }));
+
+    expect(await screen.findAllByText("입력해주세요")).toHaveLength(3);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
 });

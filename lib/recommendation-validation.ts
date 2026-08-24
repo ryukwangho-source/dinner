@@ -43,3 +43,33 @@ export function validateRecommendationInput(
 
   return errors;
 }
+
+export interface ManualRecommendationFormInput {
+  place: string;
+  partySize: string;
+  budgetPerPerson: string;
+}
+
+export interface ManualRecommendationFormErrors {
+  place?: string;
+  partySize?: string;
+  budgetPerPerson?: string;
+}
+
+export function validateManualRecommendationInput(
+  input: ManualRecommendationFormInput,
+): ManualRecommendationFormErrors {
+  const errors: ManualRecommendationFormErrors = {};
+
+  if (input.place.trim() === "") {
+    errors.place = REQUIRED_MESSAGE;
+  }
+  if (!isPositiveInteger(input.partySize)) {
+    errors.partySize = REQUIRED_MESSAGE;
+  }
+  if (!isPositiveNumber(input.budgetPerPerson)) {
+    errors.budgetPerPerson = REQUIRED_MESSAGE;
+  }
+
+  return errors;
+}
