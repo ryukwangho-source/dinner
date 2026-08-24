@@ -40,10 +40,12 @@ applied: not-yet
 
 ---
 category: code-review
-applied: not-yet
+applied: rule
 ---
 ## 기존 서비스를 참조해 새 서비스를 만들 때 품질 필터를 빠뜨림
 
 **상황**: Step 4, code-reviewer 검토. `venue-manual-generator.ts`를 `venue-generator.ts`(Task 1 참조 대상)를 베껴 만들면서, 프롬프트·파싱·이원 경로 구조는 그대로 옮겼지만 `toVenues()`가 하던 업종 화이트리스트(`ALLOWED_CATEGORIES`)·평점·리뷰수 문턱(`RATING_MIN`/`RELAXED_REVIEW_MIN`) 필터링은 courseTwo 변환 과정에 옮기지 않았다. fixture 데이터가 항상 깨끗해서 기존 테스트로는 이 공백이 드러나지 않았다.
 **판단**: `toCourseTwoVenues`를 분리해 동일 문턱을 적용하고, 화이트리스트 밖 업종·저품질 후보를 직접 주입하는 단위 테스트를 추가했다(`venue-generator.test.ts`의 `toVenues` 테스트와 동일 패턴).
 **다시 마주칠 가능성**: 높음 — "참조 서비스를 복사해 새 서비스를 만든다"는 패턴 자체가 이번 프로젝트에서 반복되고 있다(Task 1 참조가 곧 이 패턴). 다음에도 기존 서비스를 참조로 삼을 땐, 그 서비스의 **후처리 방어 로직 목록**(화이트리스트·문턱·null 가드 등)을 plan.md에 체크리스트로 명시하고 각각 옮겼는지 코드 리뷰 전에 스스로 대조하면 이런 누락을 미리 잡을 수 있다.
+
+**승격**: 사용자 승인 후 `.claude/skills/draft-plan/SKILL.md` Step 4에 "참조 서비스 복사" 섹션으로 반영 — 다음 `/draft-plan`부터 참조 서비스의 후처리 방어 로직을 plan.md에 명시하고 수용 기준에 대응시키도록 강제한다.
