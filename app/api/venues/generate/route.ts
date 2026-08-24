@@ -16,7 +16,7 @@ const regionBodySchema = z.object({
 
 const manualBodySchema = z.object({
   mode: z.literal("manual"),
-  place: z.string().trim().min(1, "1차 장소명을 입력해주세요"),
+  place: z.string().trim().min(1, "1차 장소명을 입력해주세요").max(100, "1차 장소명이 너무 길어요"),
   partySize: z.coerce.number().int().positive(),
   budgetPerPerson: z.coerce.number().positive(),
   force: z.coerce.boolean().optional().default(false),

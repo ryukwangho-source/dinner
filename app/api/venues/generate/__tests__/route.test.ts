@@ -140,6 +140,20 @@ describe("/api/venues/generate — mode: manual (1차 장소 직접 입력)", ()
     expect(res.status).toBe(400);
   });
 
+  it("place가 100자를 초과하면 400", async () => {
+    const res = await generateVenuesRoute(
+      jsonRequest({ mode: "manual", place: "가".repeat(101), partySize: 8, budgetPerPerson: 30000 }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("partySize 누락 → 400", async () => {
+    const res = await generateVenuesRoute(
+      jsonRequest({ mode: "manual", place: "브리비트 강남역점", budgetPerPerson: 30000 }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("6시간이 지난 뒤 같은 manual 조합으로 재요청하면 캐시를 쓰지 않고 새 job이 만들어진다", async () => {
     vi.useFakeTimers();
     try {

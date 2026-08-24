@@ -6,6 +6,8 @@ import {
   COURSE_TWO_CATEGORIES,
   GENERATION_MODEL,
   MAX_WALKING_MINUTES,
+  RATING_MIN,
+  RELAXED_REVIEW_MIN,
   SONNET_5_PRICE_PER_TOKEN,
   WEB_SEARCH_MAX_USES,
 } from "@/config/venue-generation";
@@ -107,6 +109,23 @@ function toVenue(raw: ManualVenue, region: string): Venue {
   };
 }
 
+const COURSE_TWO_ALLOWED = new Set<string>(COURSE_TWO_CATEGORIES);
+
+/**
+ * 2차 후보를 업종 화이트리스트(이자카야·호프)·평점·리뷰수 문턱·도보거리로 필터링해 Venue로 변환한다.
+ * venue-generator.ts의 toVenues와 동일한 품질 기준 — 1차(사용자 지정 장소)와 달리 2차는 LLM이
+ * 새로 조사한 후보이므로 같은 방어가 필요하다.
+ */
+export function toCourseTwoVenues(raw: ManualVenue[], place: string): Venue[] {
+  return raw
+    .filter((v) => COURSE_TWO_ALLOWED.has(v.category))
+    .filter((v) => v.rating >= RATING_MIN && v.reviewCount >= RELAXED_REVIEW_MIN)
+    .filter(
+      (v) => v.walkingMinutes !== null && v.walkingMinutes !== undefined && v.walkingMinutes <= MAX_WALKING_MINUTES,
+    )
+    .map((v) => toVenue(v, place));
+}
+
 function toRecommendation(
   research: ManualResearchResult,
   place: string,
@@ -119,9 +138,7 @@ function toRecommendation(
     withinBudget: placeVenue.pricePerPerson <= budgetPerPerson,
   };
 
-  const courseTwoVenues = research.courseTwo
-    .filter((v) => v.walkingMinutes !== null && v.walkingMinutes !== undefined && v.walkingMinutes <= MAX_WALKING_MINUTES)
-    .map((v) => toVenue(v, place));
+  const courseTwoVenues = toCourseTwoVenues(research.courseTwo, place);
 
   return {
     region: place,

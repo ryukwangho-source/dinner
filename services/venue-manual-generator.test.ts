@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { COURSE_TWO_CATEGORIES, MAX_WALKING_MINUTES } from "@/config/venue-generation";
-import { generateManualVenues, parseManualResultFromText } from "@/services/venue-manual-generator";
+import {
+  generateManualVenues,
+  parseManualResultFromText,
+  toCourseTwoVenues,
+} from "@/services/venue-manual-generator";
 
 describe("generateManualVenues (GENERATE_FIXTURE=1)", () => {
   beforeEach(() => {
@@ -57,6 +61,25 @@ describe("generateManualVenues (GENERATE_FIXTURE=1)", () => {
   it("fixture 모드에서는 usage가 null이다", async () => {
     const { usage } = await generateManualVenues("브리비트 강남역점", 8, 30000);
     expect(usage).toBeNull();
+  });
+});
+
+describe("toCourseTwoVenues", () => {
+  it("2차 업종 화이트리스트(이자카야·호프)에 없는 후보는 걸러진다", () => {
+    const raw = [
+      { name: "정상집", category: "이자카야", rating: 4.5, reviewCount: 100, pricePerPerson: 25000, walkingMinutes: 5 },
+      { name: "카페", category: "카페", rating: 4.5, reviewCount: 100, pricePerPerson: 8000, walkingMinutes: 3 },
+    ];
+    const venues = toCourseTwoVenues(raw, "테스트장소");
+    expect(venues).toHaveLength(1);
+    expect(venues[0].name).toBe("정상집");
+  });
+
+  it("평점·리뷰수 문턱 미달 후보는 걸러진다", () => {
+    const raw = [
+      { name: "저평점집", category: "호프", rating: 3.0, reviewCount: 100, pricePerPerson: 20000, walkingMinutes: 5 },
+    ];
+    expect(toCourseTwoVenues(raw, "테스트장소")).toHaveLength(0);
   });
 });
 
