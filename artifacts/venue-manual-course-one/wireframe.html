@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wireframe: venue-manual-course-one</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root {
+    --w-bg: #f5f5f5;
+    --w-border: #ccc;
+    --w-text: #555;
+    --w-muted: #aaa;
+    --w-fill: #eee;
+  }
+
+  * {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--w-text);
+  }
+
+  body { background: var(--w-bg); }
+
+  nav { position: sticky; top: 0; z-index: 40; background: var(--w-bg); border-bottom: 1px solid var(--w-border); }
+  nav button { cursor: pointer; font-size: 13px; }
+  nav button:hover { background: var(--w-fill); border-radius: 4px; }
+  nav button.active { font-weight: bold; border-bottom: 2px solid var(--w-text); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .vp-toggle button {
+    font-size: 12px; padding: 2px 8px;
+    border: 1px solid var(--w-border); cursor: pointer; background: white;
+  }
+  .vp-toggle button:first-child { border-radius: 4px 0 0 4px; }
+  .vp-toggle button:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+  .vp-toggle button.active { background: var(--w-text); color: white; }
+
+  body.viewport-mobile .screen-content {
+    max-width: 375px !important;
+    margin: 24px auto !important;
+    border: 2px solid var(--w-border);
+    border-radius: 24px;
+    min-height: 667px;
+    background: white;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 32px 16px !important;
+  }
+
+  .screen-notes {
+    background: #fffde7;
+    border-left: 3px solid #ffd54f;
+    padding: 12px 16px;
+    margin-top: 24px;
+    font-size: 13px;
+    border-radius: 0 4px 4px 0;
+  }
+  .screen-notes summary {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    color: #b0a050;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .screen-notes p { margin: 6px 0 2px; color: #777; }
+  .screen-notes ul { margin: 4px 0 0 16px; padding: 0; color: #777; }
+  .screen-notes li { margin: 2px 0; }
+
+  /* wireframe-only helpers */
+  .w-seg-btn { border: 1px solid var(--w-border); padding: 6px 10px; font-size: 12px; cursor: pointer; background: white; }
+  .w-seg-btn.w-seg-active { background: var(--w-text); color: white; }
+  .w-card { border: 1px solid var(--w-border); border-radius: 8px; padding: 10px 12px; background: white; }
+  .w-input { border: 1px solid var(--w-border); border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 100%; background: white; }
+  .w-btn { border: 1px solid var(--w-border); border-radius: 6px; padding: 8px 12px; font-size: 13px; background: var(--w-fill); cursor: pointer; }
+  .w-btn-primary { background: var(--w-text); color: white; border-color: var(--w-text); }
+</style>
+</head>
+<body class="p-0 m-0 viewport-mobile">
+
+<nav class="flex items-center gap-4 px-6 py-2">
+  <span class="text-xs" style="color:var(--w-muted)">wireframe · venue-manual-course-one</span>
+  <button id="nav-0" onclick="show(0)" class="px-2 py-1">홈 화면</button>
+  <button id="nav-1" onclick="show(1)" class="px-2 py-1">생성 중</button>
+  <button id="nav-2" onclick="show(2)" class="px-2 py-1">결과 화면</button>
+  <button id="nav-3" onclick="show(3)" class="px-2 py-1">생성 실패</button>
+  <div class="vp-toggle flex ml-auto">
+    <button id="vp-desktop" onclick="setViewport('desktop')">Desktop</button>
+    <button id="vp-mobile" onclick="setViewport('mobile')" class="active">Mobile</button>
+  </div>
+</nav>
+
+<!-- Screen 0: 홈 화면 (모드 토글) -->
+<div id="screen-0" class="screen" data-scenario="scenario-1">
+  <div class="screen-content @container max-w-md mx-auto p-6">
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      홈 화면 — 추천 방식 토글
+    </h2>
+
+    <div class="flex flex-col gap-6">
+      <div class="text-center">
+        <div class="text-base font-bold">회식 장소 추천</div>
+        <p id="mode-desc" class="text-xs mt-1" style="color:var(--w-muted)">
+          1차 장소를 직접 입력하면 평점·리뷰·조회수를 보여주고, 그 장소 기준 도보 10분 이내 2차 5곳을 추천해드려요
+        </p>
+      </div>
+
+      <div class="flex w-full" style="border-radius:6px; overflow:hidden;">
+        <button class="w-seg-btn flex-1" id="seg-region" onclick="setMode('region')">지역으로 찾기</button>
+        <button class="w-seg-btn flex-1 w-seg-active" id="seg-manual" onclick="setMode('manual')">1차 장소 직접 입력</button>
+      </div>
+
+      <!-- 지역 모드 패널 (기존 화면, 참조용) -->
+      <div id="panel-region" class="flex flex-col gap-4" style="display:none;">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold">지역</label>
+          <div class="flex gap-2">
+            <input class="w-input" placeholder="예: 강남역 (Enter로 추가)" disabled>
+            <button class="w-btn">추가</button>
+          </div>
+          <div class="flex gap-1 mt-1">
+            <span class="text-[11px] px-2 py-0.5" style="border:1px solid var(--w-border); border-radius:999px; background:var(--w-fill);">강남역 ×</span>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold">인원수</label>
+          <input class="w-input" placeholder="예: 8" disabled>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold">인원당 가용예산</label>
+          <input class="w-input" placeholder="예: 30000" disabled>
+        </div>
+        <button class="w-btn w-btn-primary">추천받기</button>
+      </div>
+
+      <!-- 1차 직접 입력 모드 패널 (신규) -->
+      <div id="panel-manual" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold">1차 장소명</label>
+          <input class="w-input" value="브리비트 강남역점">
+          <p class="text-[11px]" style="color:var(--w-muted)">업종 제한 없이 입력하신 장소 그대로 조사해요</p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold">인원수</label>
+          <input class="w-input" value="8">
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold">인원당 가용예산</label>
+          <input class="w-input" value="30000">
+        </div>
+        <button class="w-btn w-btn-primary">추천받기</button>
+      </div>
+
+      <div class="text-center text-xs" style="color:var(--w-muted)">
+        저장한 장소 보기 →
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>홈 화면 상단 세그먼트 버튼으로 "지역으로 찾기" ↔ "1차 장소 직접 입력" 전환. 기본 진입 시 모드는 사용자의 마지막 선택을 따르거나 "지역으로 찾기"를 기본값으로 둔다(plan.md에서 결정).</p>
+        <ul>
+          <li>트리거: "/" 홈 화면 첫 진입</li>
+          <li>인터랙션: 세그먼트 버튼 클릭 → 아래 입력 필드 그룹 전환. 지역 모드는 기존 구현 그대로(참조용, 이번 feature 변경 없음)</li>
+          <li>전환: "추천받기" 클릭 → 결과 화면(생성 중)으로 이동</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 1: 생성 중 -->
+<div id="screen-1" class="screen" data-scenario="scenario-1">
+  <div class="screen-content @container max-w-md mx-auto p-6">
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      생성 중 (진행 안내)
+    </h2>
+
+    <div class="flex flex-col items-center gap-3 text-center p-8 w-card">
+      <i data-lucide="loader-circle" class="animate-spin" style="width:28px;height:28px;"></i>
+      <div class="text-sm font-bold">추천 장소를 찾고 있어요</div>
+      <p class="text-xs" style="color:var(--w-muted)">
+        입력하신 장소의 평점·리뷰를 조사하고 근처 2차 장소를 찾는 중이라 조금 걸릴 수 있어요.<br>
+        화면을 벗어나도 계속 진행돼요.
+      </p>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>기존 지역 흐름의 로딩 화면(GenerationStatus)과 동일한 컴포넌트·톤을 재사용하고 설명 문구만 1차 장소 기준으로 바꾼다.</p>
+        <ul>
+          <li>트리거: 홈 화면에서 "추천받기" 클릭 직후, 캐시된 결과가 없을 때</li>
+          <li>인터랙션: 없음(자동 폴링)</li>
+          <li>전환: 생성 완료 → 결과 화면으로 자동 전환 / 실패 → 생성 실패 화면 / <b>같은 조합이 6시간 이내 캐시돼 있으면 이 화면을 거치지 않고 바로 결과 화면으로 진입</b>(시나리오 3, 비시각적)</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 2: 결과 화면 -->
+<div id="screen-2" class="screen" data-scenario="scenario-1, scenario-2, scenario-5, scenario-6">
+  <div class="screen-content @container max-w-2xl mx-auto p-4">
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      결과 화면 — 1차 1곳 + 2차 5곳
+    </h2>
+
+    <div class="flex flex-col gap-4">
+      <div class="text-xs" style="color:var(--w-muted)">
+        브리비트 강남역점 · 8명 · 1인 30,000원
+      </div>
+      <div class="text-xs" style="color:var(--w-muted)">
+        검색 시간 1분 20초 · 토큰 4,200 in / 6,100 out · 약 $0.842
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <h3 class="text-sm font-bold">브리비트 강남역점</h3>
+
+        <div class="flex flex-col gap-2">
+          <h4 class="text-xs font-bold" style="color:var(--w-muted)">1차 · 입력한 장소</h4>
+          <div class="w-card flex gap-3">
+            <input type="checkbox" class="mt-1">
+            <div class="flex-1">
+              <div class="flex items-center justify-between gap-2">
+                <span class="flex items-center gap-1 text-sm font-bold">
+                  브리비트 강남역점
+                  <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
+                </span>
+                <span class="text-[10px] px-1.5 py-0.5" style="border:1px solid var(--w-border); border-radius:4px;">예산 초과</span>
+              </div>
+              <div class="mt-0.5 text-xs" style="color:var(--w-muted)">양식 · 브리비트 강남역점</div>
+              <div class="mt-1 flex items-center gap-2 text-xs" style="color:var(--w-muted)">
+                <span>★ 4.9</span><span>리뷰 336</span><span>·</span><span>조회 45.0k</span>
+              </div>
+              <div class="text-[10px]" style="color:var(--w-muted)">네이버 플레이스 등 웹검색 기준(정확한 값이 없으면 추정치)</div>
+              <div class="mt-1 text-xs font-bold">1인 35,000원</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <h4 class="text-xs font-bold" style="color:var(--w-muted)">2차 · 가볍게 한잔 (도보 10분 이내)</h4>
+          <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
+            <div class="w-card flex gap-3">
+              <input type="checkbox" class="mt-1">
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-bold">오뎅오색 강남역점</span>
+                  <span class="text-xs" style="color:var(--w-muted)">★ 4.5</span>
+                </div>
+                <div class="mt-0.5 text-xs" style="color:var(--w-muted)">이자카야 · 브리비트 강남역점 · 도보 4분</div>
+                <div class="mt-1 flex items-center gap-2 text-xs" style="color:var(--w-muted)"><span>리뷰 480</span><span>·</span><span>조회 30.0k</span></div>
+                <div class="mt-1 text-xs font-bold">1인 30,000원</div>
+              </div>
+            </div>
+            <div class="w-card flex gap-3">
+              <input type="checkbox" class="mt-1">
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-bold">생활맥주 강남역점</span>
+                  <span class="text-xs" style="color:var(--w-muted)">★ 4.2</span>
+                </div>
+                <div class="mt-0.5 text-xs" style="color:var(--w-muted)">호프 · 브리비트 강남역점 · 도보 5분</div>
+                <div class="mt-1 flex items-center gap-2 text-xs" style="color:var(--w-muted)"><span>리뷰 260</span><span>·</span><span>조회 16.0k</span></div>
+                <div class="mt-1 text-xs font-bold">1인 25,000원</div>
+              </div>
+            </div>
+            <div class="w-card flex gap-3">
+              <input type="checkbox" class="mt-1">
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-bold">야키토리 나루토</span>
+                  <span style="color:var(--w-muted)"><span class="text-[10px] px-1.5 py-0.5" style="border:1px solid var(--w-border); border-radius:4px;">예산 초과</span></span>
+                </div>
+                <div class="mt-0.5 text-xs" style="color:var(--w-muted)">이자카야 · 브리비트 강남역점 · 도보 6분</div>
+                <div class="mt-1 flex items-center gap-2 text-xs" style="color:var(--w-muted)"><span>★ 4.6</span><span>리뷰 390</span><span>·</span><span>조회 25.0k</span></div>
+                <div class="mt-1 text-xs font-bold">1인 35,000원</div>
+              </div>
+            </div>
+            <div class="w-card flex gap-3">
+              <input type="checkbox" class="mt-1">
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-bold">이자카야 나무 강남역3호점</span>
+                  <span class="text-[10px] px-1.5 py-0.5" style="border:1px solid var(--w-border); border-radius:4px;">예산 초과</span>
+                </div>
+                <div class="mt-0.5 text-xs" style="color:var(--w-muted)">이자카야 · 브리비트 강남역점 · 도보 5분</div>
+                <div class="mt-1 flex items-center gap-2 text-xs" style="color:var(--w-muted)"><span>★ 4.0</span><span>리뷰 620</span><span>·</span><span>조회 40.0k</span></div>
+                <div class="mt-1 text-xs font-bold">1인 35,000원</div>
+              </div>
+            </div>
+            <div class="w-card flex gap-3">
+              <input type="checkbox" class="mt-1">
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-bold">호프집 온기</span>
+                  <span class="text-xs" style="color:var(--w-muted)">★ 4.3</span>
+                </div>
+                <div class="mt-0.5 text-xs" style="color:var(--w-muted)">호프 · 브리비트 강남역점 · 도보 8분</div>
+                <div class="mt-1 flex items-center gap-2 text-xs" style="color:var(--w-muted)"><span>리뷰 190</span><span>·</span><span>조회 12.0k</span></div>
+                <div class="mt-1 text-xs font-bold">1인 22,000원</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col @md:flex-row gap-2 w-card">
+        <button class="w-btn">전체 선택</button>
+        <span class="text-xs self-center @md:mr-auto" style="color:var(--w-muted)">0곳 선택됨</span>
+        <button class="w-btn">선택 저장</button>
+        <button class="w-btn">선택 삭제</button>
+        <button class="w-btn">카톡 공유</button>
+        <button class="w-btn">투표 만들기</button>
+      </div>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>지역 흐름의 결과 화면(ResultList/VenueCard)을 그대로 재사용 — "지역" 그룹 제목 자리에 입력한 1차 장소명("브리비트 강남역점")을 쓴다(시나리오 2). 1차 섹션은 카드가 정확히 1개뿐이라는 점만 다르고, 2차 섹션(카드 5개·도보시간·예산배지)은 기존 컴포넌트 그대로.</p>
+        <ul>
+          <li>트리거: 생성 완료(또는 6시간 이내 캐시 재사용)</li>
+          <li>인터랙션: 체크박스 선택 → 하단 액션바(저장/삭제/공유/투표) 활성화. 기존 지역 흐름과 100% 동일한 컴포넌트(시나리오 6)</li>
+          <li>전환: "투표 만들기" → /vote/new로 이동 (기존과 동일)</li>
+          <li>시나리오 5(회식과 무관한 업종도 그대로 표시)는 이 화면에서 카테고리 뱃지·특별 처리 없이 그대로 렌더링되는 것으로 커버됨 — 별도 화면 불필요</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- Screen 3: 생성 실패 -->
+<div id="screen-3" class="screen" data-scenario="scenario-4">
+  <div class="screen-content @container max-w-md mx-auto p-6">
+    <h2 class="text-lg font-bold mb-5" style="color:var(--w-muted); border-bottom:1px solid var(--w-border); padding-bottom:8px;">
+      생성 실패
+    </h2>
+
+    <div class="flex flex-col items-center gap-3 text-center p-8 w-card">
+      <i data-lucide="triangle-alert" style="width:24px;height:24px;"></i>
+      <div class="text-sm font-bold">추천 생성에 실패했어요</div>
+      <p class="text-xs" style="color:var(--w-muted)">입력하신 장소를 찾지 못했을 수 있어요</p>
+      <button class="w-btn w-btn-primary">다시 시도</button>
+    </div>
+
+    <div class="screen-notes">
+      <details open>
+        <summary>Notes</summary>
+        <p>기존 지역 흐름의 실패 화면(GenerationStatus error state)을 그대로 재사용. 빈 카드나 대체 데이터 없이 항상 이 실패 화면으로 귀결된다(불변 규칙).</p>
+        <ul>
+          <li>트리거: 입력한 1차 장소명을 웹검색으로 확인하지 못했거나 생성 중 오류 발생</li>
+          <li>인터랙션: "다시 시도" 클릭</li>
+          <li>전환: "다시 시도" → 같은 입력으로 재생성 시작 → 생성 중 화면으로 이동</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+var currentScreen = 0;
+var screenIds = [];
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('screen-' + id).classList.add('active');
+  document.querySelectorAll('nav button[id^="nav-"]').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('nav-' + id).classList.add('active');
+  currentScreen = screenIds.indexOf(id);
+}
+
+function setViewport(mode) {
+  document.body.classList.remove('viewport-mobile', 'viewport-desktop');
+  document.body.classList.add('viewport-' + mode);
+  document.querySelectorAll('.vp-toggle button').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('vp-' + mode).classList.add('active');
+}
+
+function setMode(mode) {
+  document.getElementById('panel-region').style.display = mode === 'region' ? 'flex' : 'none';
+  document.getElementById('panel-manual').style.display = mode === 'manual' ? 'flex' : 'none';
+  document.getElementById('seg-region').classList.toggle('w-seg-active', mode === 'region');
+  document.getElementById('seg-manual').classList.toggle('w-seg-active', mode === 'manual');
+  document.getElementById('mode-desc').textContent = mode === 'manual'
+    ? '1차 장소를 직접 입력하면 평점·리뷰·조회수를 보여주고, 그 장소 기준 도보 10분 이내 2차 5곳을 추천해드려요'
+    : '지역·인원수·예산만 입력하면 지역마다 도보 10분 이내 1차·2차 상위 5곳을 추천해드려요';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('nav button[id^="nav-"]').forEach(function(b) {
+    screenIds.push(parseInt(b.id.replace('nav-', '')));
+  });
+  var first = document.querySelector('nav button[id^="nav-"]');
+  if (first) first.click();
+  lucide.createIcons();
+});
+</script>
+</body>
+</html>
