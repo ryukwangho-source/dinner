@@ -29,20 +29,26 @@ type Phase =
 
 const POLL_MS = 3000;
 
-export interface VenueResultsFlowProps {
-  regions: string[];
+export type VenueResultsFlowProps = (
+  | { mode?: "region"; regions: string[] }
+  | { mode: "manual"; place: string }
+) & {
   partySize: number;
   budgetPerPerson: number;
   votes: VoteSummary[];
-}
+};
 
 /**
  * 결과 화면 흐름: 생성 시작 → 폴링(로딩) → 완료/실패.
  * 화면 이탈·새로고침 후 재진입해도 서버의 기존 job을 그대로 이어 폴링한다.
  * 서버가 6시간 이내 캐시된 결과를 곧바로 돌려주면(fromCache) 그 결과를 바로 보여주지 않고
  * 사용자에게 재검색 여부를 먼저 물어본다.
+ * mode="manual"이면 1차 장소 직접 입력 흐름 — regions 대신 place 하나를 쓰고, ResultList에는
+ * 그 장소명을 담은 단일 원소 배열([place])을 그대로 넘겨 컴포넌트 변경 없이 그룹 제목으로 쓴다.
  */
-export function VenueResultsFlow({ regions, partySize, budgetPerPerson, votes }: VenueResultsFlowProps) {
+export function VenueResultsFlow(props: VenueResultsFlowProps) {
+  const { partySize, budgetPerPerson, votes } = props;
+  const regions = props.mode === "manual" ? [props.place] : props.regions;
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -80,15 +86,20 @@ export function VenueResultsFlow({ regions, partySize, budgetPerPerson, votes }:
 
   const requestGeneration = useCallback(
     async function requestGeneration(force: boolean) {
+      const body: Record<string, unknown> =
+        props.mode === "manual"
+          ? { mode: "manual", place: props.place, partySize, budgetPerPerson, force }
+          : { regions: props.regions, partySize, budgetPerPerson, force };
       const res = await fetch("/api/venues/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ regions, partySize, budgetPerPerson, force }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`generate failed: ${res.status}`);
       return (await res.json()) as { jobId: string; status: string; fromCache: boolean };
     },
-    [regions, partySize, budgetPerPerson],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [props, partySize, budgetPerPerson],
   );
 
   const start = useCallback(

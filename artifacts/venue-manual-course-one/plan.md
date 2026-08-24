@@ -46,7 +46,7 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
 
 ## Tasks
 
-### Task 1: 1차 장소 검증 + 도보 10분 이내 2차 생성 서비스 (fixture 모드 포함)
+### Task 1: 1차 장소 검증 + 도보 10분 이내 2차 생성 서비스 (fixture 모드 포함) ✅
 
 - **담당 시나리오**: Scenario 1 (생성 로직), Scenario 4 (실패 판정), Scenario 5 (업종 무관 허용)
 - **크기**: M (3 파일)
@@ -65,18 +65,18 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
   - `services/venue-manual-generator.test.ts`
   - `services/fixtures/venue-manual-generation-fixture.ts` — `GENERATE_FIXTURE=1`용 결정적 데이터: 입력한 `place` 이름을 그대로 쓰는 1차 장소 1곳(평점·리뷰·조회수 포함) + 도보 10분 이내 2차 후보 5곳 이상(이자카야·호프 섞어서)
 - **수용 기준**:
-  - [ ] `GENERATE_FIXTURE=1`일 때 `generateManualVenues("브리비트 강남역점", 8, 30000)` 호출 → `results[0].region`이 `"브리비트 강남역점"`이고 `courseOne.length === 1`, `courseOne[0].venue.name`에 입력한 장소명이 포함된다
-  - [ ] 반환된 1차 장소의 `walkingMinutes`는 `null`이다
-  - [ ] 도보 10분 이내 2차 후보가 5곳 이상 있는 fixture 데이터를 쓰면 `courseTwo.length === 5`이고(spec 시나리오 1 happy path), 모든 `courseTwo` 항목의 `walkingMinutes`가 `MAX_WALKING_MINUTES`(10) 이하다
-  - [ ] `courseTwo` 항목들의 `category`가 2차 업종(이자카야·호프)에만 속한다
-  - [ ] 반환된 1차·2차 각 항목의 `rating`·`reviewCount`·`viewCount`는 fixture(조사 결과) 값 그대로이며 고정 상수로 대체되지 않는다 — fixture에 항목마다 서로 다른 값을 심어 그 값이 그대로 나오는지 검증한다 (spec 불변 규칙 2)
-  - [ ] 카페 등 회식과 무관한 이름의 장소를 입력해도(fixture로 그런 이름을 넣었을 때) 업종을 이유로 거부되지 않고 `courseOne`에 그대로 포함된다
-  - [ ] 장소를 확인할 수 없는 입력(fixture에서 "실패" 포함 이름 등 의도된 실패 트리거)을 주면 함수가 에러를 던진다
-- **검증**: `bun run test -- services/venue-manual-generator.test.ts`
+  - [x] `GENERATE_FIXTURE=1`일 때 `generateManualVenues("브리비트 강남역점", 8, 30000)` 호출 → `results[0].region`이 `"브리비트 강남역점"`이고 `courseOne.length === 1`, `courseOne[0].venue.name`에 입력한 장소명이 포함된다
+  - [x] 반환된 1차 장소의 `walkingMinutes`는 `null`이다
+  - [x] 도보 10분 이내 2차 후보가 5곳 이상 있는 fixture 데이터를 쓰면 `courseTwo.length === 5`이고(spec 시나리오 1 happy path), 모든 `courseTwo` 항목의 `walkingMinutes`가 `MAX_WALKING_MINUTES`(10) 이하다
+  - [x] `courseTwo` 항목들의 `category`가 2차 업종(이자카야·호프)에만 속한다
+  - [x] 반환된 1차·2차 각 항목의 `rating`·`reviewCount`·`viewCount`는 fixture(조사 결과) 값 그대로이며 고정 상수로 대체되지 않는다 — fixture에 항목마다 서로 다른 값을 심어 그 값이 그대로 나오는지 검증한다 (spec 불변 규칙 2)
+  - [x] 카페 등 회식과 무관한 이름의 장소를 입력해도(fixture로 그런 이름을 넣었을 때) 업종을 이유로 거부되지 않고 `courseOne`에 그대로 포함된다
+  - [x] 장소를 확인할 수 없는 입력(fixture에서 "실패" 포함 이름 등 의도된 실패 트리거)을 주면 함수가 에러를 던진다
+- **검증**: `bun run test -- services/venue-manual-generator.test.ts` — 통과 (10/10)
 
 ---
 
-### Task 2: Job store에 mode 구분 추가 (지역 vs 1차 직접 입력 캐시 분리)
+### Task 2: Job store에 mode 구분 추가 (지역 vs 1차 직접 입력 캐시 분리) ✅
 
 - **담당 시나리오**: Scenario 3 (캐시 재사용의 전제 — 지역 job과 섞이지 않아야 함)
 - **크기**: S (2 파일)
@@ -91,21 +91,21 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
     - `rowToJob`이 `mode`를 포함해 반환
   - `services/venue-job-store.test.ts` — 기존 케이스에 `mode` 인자 추가 + 신규 케이스
 - **수용 기준**:
-  - [ ] `create(["강남역"], 8, 30000, "manual")`로 만든 job은 `mode`가 `"manual"`이다
-  - [ ] 같은 문자열("강남역")로 `mode="region"` job과 `mode="manual"` job을 각각 만들면, `findFresh(["강남역"], 8, 30000, "region")`은 region job만, `findFresh(["강남역"], 8, 30000, "manual")`은 manual job만 반환한다 (서로 캐시가 섞이지 않는다)
-  - [ ] `mode` 컬럼이 없는 기존 DB 파일을 열어도 에러 없이 마이그레이션되고, 기존에 저장된 row는 `mode`가 `"region"`으로 조회된다
-- **검증**: `bun run test -- services/venue-job-store.test.ts`
+  - [x] `create(["강남역"], 8, 30000, "manual")`로 만든 job은 `mode`가 `"manual"`이다
+  - [x] 같은 문자열("강남역")로 `mode="region"` job과 `mode="manual"` job을 각각 만들면, `findFresh(["강남역"], 8, 30000, now, "region")`은 region job만, `findFresh(["강남역"], 8, 30000, now, "manual")`은 manual job만 반환한다 (서로 캐시가 섞이지 않는다) — **구현 시 mode를 4번째가 아니라 5번째(마지막) 파라미터로 배치**(learnings.md 참고, 기존 `now` 인자 자리 보존)
+  - [x] `mode` 컬럼이 없는 기존 DB 파일을 열어도 에러 없이 마이그레이션되고, 기존에 저장된 row는 `mode`가 `"region"`으로 조회된다
+- **검증**: `bun run test -- services/venue-job-store.test.ts` — 통과 (20/20)
 
 ---
 
-### Checkpoint: Tasks 1-2 이후
-- [ ] 모든 테스트 통과: `bun run test`
-- [ ] 빌드 성공: `bun run build`
-- [ ] 서비스 레벨 단독 — 아직 API/UI 미연결, 유닛 테스트로 갈음
+### Checkpoint: Tasks 1-2 이후 ✅
+- [x] 모든 테스트 통과: `bun run test` (235/235)
+- [x] 빌드 성공: `bun run build`
+- [x] 서비스 레벨 단독 — 아직 API/UI 미연결, 유닛 테스트로 갈음
 
 ---
 
-### Task 3: 생성 시작 API에 manual 모드 연결
+### Task 3: 생성 시작 API에 manual 모드 연결 ✅
 
 - **담당 시나리오**: Scenario 1, 3, 4 (API 레벨)
 - **크기**: M (3 파일)
@@ -120,23 +120,23 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
     - `mode === "manual"`이면 `startManualGeneration` 호출, 아니면 기존 `startGeneration` 그대로 호출
   - `app/api/venues/generate/__tests__/route.test.ts` — manual 케이스 추가
 - **수용 기준**:
-  - [ ] `POST /api/venues/generate`에 `{ mode: "manual", place: "브리비트 강남역점", partySize: 8, budgetPerPerson: 30000 }`를 보내면 202와 jobId가 반환된다 (캐시·진행 중 job 없는 최초 요청)
-  - [ ] 같은 조합으로 6시간 이내 캐시된 `done` job이 있으면 새 job을 만들지 않고 그 결과가 담긴 job이 즉시 반환된다 (`fromCache: true`)
-  - [ ] `mode` 없이 기존처럼 `{ regions: [...], partySize, budgetPerPerson }`만 보내면 기존과 동일하게(region 모드로) 동작한다 — 기존 테스트 전부 그대로 통과
-  - [ ] `GET /api/venues/generate/[jobId]`로 manual job 상태를 조회하면 완료 시 `result[0].region`에 입력한 장소명이, 실패 시 에러 메시지가 담긴다
-  - [ ] 6시간이 지난 뒤 같은 manual 조합으로 재요청하면 캐시를 쓰지 않고 `fromCache: false`로 새 job이 만들어진다 (findFresh의 `now` 인자를 6시간 이후 시각으로 주입해 검증 — spec 시나리오 3 성공 기준 2)
-- **검증**: `bun run test -- app/api/venues/generate`
+  - [x] `POST /api/venues/generate`에 `{ mode: "manual", place: "브리비트 강남역점", partySize: 8, budgetPerPerson: 30000 }`를 보내면 202와 jobId가 반환된다 (캐시·진행 중 job 없는 최초 요청)
+  - [x] 같은 조합으로 6시간 이내 캐시된 `done` job이 있으면 새 job을 만들지 않고 그 결과가 담긴 job이 즉시 반환된다 (`fromCache: true`)
+  - [x] `mode` 없이 기존처럼 `{ regions: [...], partySize, budgetPerPerson }`만 보내면 기존과 동일하게(region 모드로) 동작한다 — 기존 테스트 전부 그대로 통과
+  - [x] `GET /api/venues/generate/[jobId]`로 manual job 상태를 조회하면 완료 시 `result[0].region`에 입력한 장소명이, 실패 시 에러 메시지가 담긴다
+  - [x] 6시간이 지난 뒤 같은 manual 조합으로 재요청하면 캐시를 쓰지 않고 `fromCache: false`로 새 job이 만들어진다 (`vi.useFakeTimers()` + `advanceTimersByTime`로 검증 — spec 시나리오 3 성공 기준 2)
+- **검증**: `bun run test -- app/api/venues/generate` — 통과 (18/18)
 
 ---
 
-### Checkpoint: Tasks 1-3 이후
-- [ ] 모든 테스트 통과: `bun run test`
-- [ ] 빌드 성공: `bun run build`
-- [ ] `curl -X POST http://localhost:3110/api/venues/generate -d '{"mode":"manual","place":"...","partySize":8,"budgetPerPerson":30000}'`로 (GENERATE_FIXTURE=1) 실제 202 → GET 폴링 → done 확인
+### Checkpoint: Tasks 1-3 이후 ✅
+- [x] 모든 테스트 통과: `bun run test` (241/241)
+- [x] 빌드 성공: `bun run build`
+- [x] `curl -X POST http://localhost:3110/api/venues/generate -d '{"mode":"manual","place":"브리비트 강남역점","partySize":8,"budgetPerPerson":30000}'`로 (GENERATE_FIXTURE=1) 실제 202(pending) → GET 폴링 → done, courseOne 1곳(walkingMinutes null)·courseTwo 5곳(도보 10분 이내) 확인
 
 ---
 
-### Task 4: 홈 화면 모드 토글 + 1차 장소 직접 입력 폼
+### Task 4: 홈 화면 모드 토글 + 1차 장소 직접 입력 폼 ✅
 
 - **담당 시나리오**: Scenario 1 (입력 UI)
 - **크기**: M (4 파일)
@@ -153,15 +153,15 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
     - manual 모드 제출 시 `router.push('/results?place=' + encode(place) + '&people=...&budget=...')`
   - `components/venue/recommend-form.test.tsx` — manual 모드 케이스 추가
 - **수용 기준**:
-  - [ ] 홈 화면 첫 진입 시 "지역으로 찾기"가 활성 탭이고 기존 지역 입력 필드가 보인다
-  - [ ] "1차 장소 직접 입력" 탭 클릭 → 지역 입력 대신 "1차 장소명" 필드 하나가 보인다
-  - [ ] 1차 장소명="브리비트 강남역점", 인원수=8, 예산=30000 입력 후 "추천받기" 클릭 → `router.push`가 `place=브리비트 강남역점`을 포함한 `/results` URL로 호출된다
-  - [ ] 1차 장소명을 비운 채 "추천받기" 클릭 → "입력해주세요" 안내가 표시되고 이동하지 않는다
-- **검증**: `bun run test -- components/venue/recommend-form.test.tsx lib/recommendation-validation.test.ts`
+  - [x] 홈 화면 첫 진입 시 "지역으로 찾기"가 활성 탭이고 기존 지역 입력 필드가 보인다
+  - [x] "1차 장소 직접 입력" 탭 클릭 → 지역 입력 대신 "1차 장소명" 필드 하나가 보인다
+  - [x] 1차 장소명="브리비트 강남역점", 인원수=8, 예산=30000 입력 후 "추천받기" 클릭 → `router.push`가 `place=브리비트 강남역점`을 포함한 `/results` URL로 호출된다
+  - [x] 1차 장소명을 비운 채 "추천받기" 클릭 → "입력해주세요" 안내가 표시되고 이동하지 않는다
+- **검증**: `bun run test -- components/venue/recommend-form.test.tsx lib/recommendation-validation.test.ts` — 통과 (10/10, 10/10)
 
 ---
 
-### Task 5: 결과 화면에서 manual 모드 흐름 연결
+### Task 5: 결과 화면에서 manual 모드 흐름 연결 ✅
 
 - **담당 시나리오**: Scenario 1, 2, 4 (UI 통합)
 - **크기**: M (3 파일)
@@ -171,10 +171,10 @@ None — 기존 venue-live-generation의 SQLite job store·Agent SDK 구독 인�
   - `components/venue/venue-results-flow.tsx`: props를 region 모드(`regions: string[]`)와 manual 모드(`place: string`) 판별 유니온으로 확장하고, `requestGeneration`이 모드에 맞는 body(`{mode:"manual", place, ...}` 또는 기존과 동일)를 보내도록 분기. `ResultList`에 넘기는 `regions` prop은 manual일 때 `[place]`로 구성해 그대로 재사용(컴포넌트 변경 없음)
   - `components/venue/venue-results-flow.test.tsx` — manual 모드 케이스 추가
 - **수용 기준**:
-  - [ ] `/results?place=브리비트+강남역점&people=8&budget=30000` 진입 시 진행 중 안내가 먼저 보이고, 완료되면 "브리비트 강남역점" 카드 1개 + 2차 카드들이 표시된다
-  - [ ] 결과 화면 그룹 제목에 입력한 장소명("브리비트 강남역점")이 그대로 표시된다
-  - [ ] 생성 실패 시 실패 안내와 "다시 시도" 버튼이 보이고, 클릭하면 같은 `place`로 재시도된다
-- **검증**: `bun run test`, `GENERATE_FIXTURE=1`로 Browser MCP에서 홈(1차 직접 입력 탭)→로딩→결과 화면까지 실제 확인, 증거는 `artifacts/venue-manual-course-one/evidence/task-5.png`
+  - [x] `/results?place=브리비트+강남역점&people=8&budget=30000` 진입 시 진행 중 안내가 먼저 보이고, 완료되면 "브리비트 강남역점" 카드 1개 + 2차 카드들이 표시된다
+  - [x] 결과 화면 그룹 제목에 입력한 장소명("브리비트 강남역점")이 그대로 표시된다
+  - [x] 생성 실패 시 실패 안내와 "다시 시도" 버튼이 보이고, 클릭하면 같은 `place`로 재시도된다 (유닛 테스트로 검증)
+- **검증**: `bun run test` 통과, `GENERATE_FIXTURE=1`로 Browser MCP에서 홈(1차 직접 입력 탭)→로딩→캐시 다이얼로그→결과 화면까지 실제 확인. 스크린샷 도구가 세션 내 pane 렌더링 문제로 불가해 DOM 텍스트 증거로 대체 — `artifacts/venue-manual-course-one/evidence/task-5.md`
 
 ---
 

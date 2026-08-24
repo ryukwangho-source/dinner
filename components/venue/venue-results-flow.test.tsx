@@ -216,3 +216,60 @@ describe("VenueResultsFlow", () => {
     expect(screen.getByText("추천 장소를 찾고 있어요")).toBeInTheDocument();
   });
 });
+
+describe("VenueResultsFlow — mode: manual (1차 장소 직접 입력)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("place를 POST body에 mode:manual로 실어 보낸다", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      status: 202,
+      json: async () => ({ jobId: "job-manual", status: "pending" }),
+    })) as unknown as typeof fetch;
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <VenueResultsFlow mode="manual" place="브리비트 강남역점" partySize={8} budgetPerPerson={30000} votes={votes} />,
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/venues/generate",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          mode: "manual",
+          place: "브리비트 강남역점",
+          partySize: 8,
+          budgetPerPerson: 30000,
+          force: false,
+        }),
+      }),
+    );
+  });
+
+  it("완료되면 결과 화면에 place를 그룹 이름으로 전달한다", async () => {
+    const state = mockServer("pending");
+    render(
+      <VenueResultsFlow mode="manual" place="브리비트 강남역점" partySize={8} budgetPerPerson={30000} votes={votes} />,
+    );
+    state.status = "done";
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await screen.findByText(/결과: 브리비트 강남역점/)).toBeInTheDocument();
+  });
+
+  it("생성 실패로 끝나면 실패 안내가 보인다", async () => {
+    const state = mockServer("pending");
+    render(
+      <VenueResultsFlow mode="manual" place="존재하지않는실패장소" partySize={8} budgetPerPerson={30000} votes={votes} />,
+    );
+    state.status = "error";
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await screen.findByText("추천 생성에 실패했어요")).toBeInTheDocument();
+  });
+});
