@@ -98,3 +98,78 @@ describe("/api/venues/generate", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("/api/venues/generate — mode: manual (1차 장소 직접 입력)", () => {
+  it("최초 요청 → 202와 jobId가 반환된다", async () => {
+    const res = await generateVenuesRoute(
+      jsonRequest({ mode: "manual", place: "브리비트 강남역점", partySize: 8, budgetPerPerson: 30000 }),
+    );
+    expect(res.status).toBe(202);
+    const body = await res.json();
+    expect(body.jobId).toBeTruthy();
+  });
+
+  it("6시간 이내 캐시된 done job이 있으면 새로 만들지 않고 즉시 fromCache:true로 반환된다", async () => {
+    const cached = store.create(["브리비트 강남역점"], 8, 30000, "manual");
+    store.markDone(cached.id, []);
+
+    const res = await generateVenuesRoute(
+      jsonRequest({ mode: "manual", place: "브리비트 강남역점", partySize: 8, budgetPerPerson: 30000 }),
+    );
+    const body = await res.json();
+    expect(body.jobId).toBe(cached.id);
+    expect(body.fromCache).toBe(true);
+  });
+
+  it("같은 장소명이라도 region 모드로 만든 캐시는 재사용하지 않는다 (mode로 캐시 분리)", async () => {
+    const regionCached = store.create(["브리비트 강남역점"], 8, 30000, "region");
+    store.markDone(regionCached.id, []);
+
+    const res = await generateVenuesRoute(
+      jsonRequest({ mode: "manual", place: "브리비트 강남역점", partySize: 8, budgetPerPerson: 30000 }),
+    );
+    const body = await res.json();
+    expect(body.jobId).not.toBe(regionCached.id);
+    expect(body.fromCache).toBe(false);
+  });
+
+  it("place가 비어있으면 400", async () => {
+    const res = await generateVenuesRoute(
+      jsonRequest({ mode: "manual", place: "", partySize: 8, budgetPerPerson: 30000 }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("6시간이 지난 뒤 같은 manual 조합으로 재요청하면 캐시를 쓰지 않고 새 job이 만들어진다", async () => {
+    vi.useFakeTimers();
+    try {
+      const stale = store.create(["브리비트 강남역점"], 8, 30000, "manual");
+      store.markDone(stale.id, []);
+
+      vi.advanceTimersByTime(7 * 60 * 60 * 1000); // 6시간 TTL을 넘긴다
+
+      const res = await generateVenuesRoute(
+        jsonRequest({ mode: "manual", place: "브리비트 강남역점", partySize: 8, budgetPerPerson: 30000 }),
+      );
+      const body = await res.json();
+      expect(body.jobId).not.toBe(stale.id);
+      expect(body.fromCache).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("GET으로 완료된 manual job을 조회하면 result[0].region에 입력한 장소명이 담긴다", async () => {
+    const job = store.create(["브리비트 강남역점"], 8, 30000, "manual");
+    store.markDone(job.id, [
+      { region: "브리비트 강남역점", courseOne: [], courseTwo: [] },
+    ]);
+
+    const { GET } = await import("../[jobId]/route");
+    const res = await GET(new Request("http://localhost"), {
+      params: Promise.resolve({ jobId: job.id }),
+    });
+    const body = await res.json();
+    expect(body.result[0].region).toBe("브리비트 강남역점");
+  });
+});

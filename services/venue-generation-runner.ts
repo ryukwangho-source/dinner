@@ -1,3 +1,4 @@
+import { generateManualVenues } from "@/services/venue-manual-generator";
 import { generateVenues } from "@/services/venue-generator";
 import { getVenueJobStore, type VenueGenerationJob } from "@/services/venue-job-store";
 
@@ -44,6 +45,52 @@ export function startGeneration(
     }
   })().catch((error) => {
     console.error("[venue-generation] 처리되지 않은 오류:", error);
+    try {
+      store.markError(job.id, "추천 생성 중 오류가 발생했습니다");
+    } catch {
+      /* store 오류는 무시 — 서버 유지가 우선 */
+    }
+  });
+
+  return { job, fromCache: false };
+}
+
+/**
+ * startGeneration과 동일한 캐시/진행중/신규생성 순서를 따르되, mode="manual"로 job store를
+ * 조회·생성하고 백그라운드 생성은 {@link generateManualVenues}(1차 장소 검증 + 도보 10분 이내
+ * 2차 조사)를 호출한다. regions 컬럼에는 place를 단일 원소 배열로 저장해 기존 job store 스키마를
+ * 그대로 재사용한다.
+ */
+export function startManualGeneration(
+  place: string,
+  partySize: number,
+  budgetPerPerson: number,
+  force = false,
+): StartGenerationResult {
+  const store = getVenueJobStore();
+  const regions = [place];
+
+  if (!force) {
+    const cached = store.findFresh(regions, partySize, budgetPerPerson, new Date(), "manual");
+    if (cached) return { job: cached, fromCache: true };
+  }
+
+  const active = store.findActive(regions, partySize, budgetPerPerson, "manual");
+  if (active) return { job: active, fromCache: false };
+
+  const job = store.create(regions, partySize, budgetPerPerson, "manual");
+
+  void (async () => {
+    store.markRunning(job.id);
+    try {
+      const { results, usage } = await generateManualVenues(place, partySize, budgetPerPerson);
+      store.markDone(job.id, results, usage);
+    } catch (error) {
+      console.error("[venue-manual-generation] 실패:", error);
+      store.markError(job.id, error instanceof Error ? error.message : "추천 생성에 실패했습니다");
+    }
+  })().catch((error) => {
+    console.error("[venue-manual-generation] 처리되지 않은 오류:", error);
     try {
       store.markError(job.id, "추천 생성 중 오류가 발생했습니다");
     } catch {
