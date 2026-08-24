@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createVenueJobStore, type VenueJobStore } from "@/services/venue-job-store";
 import type { GenerationUsage } from "@/types/generation-usage";
@@ -153,6 +154,74 @@ describe("venueJobStore", () => {
       );
       expect(second.get(runningJob.id)?.status).toBe("error");
       expect(second.get(doneJob.id)?.status).toBe("done");
+    });
+  });
+
+  describe("mode 구분 (지역 vs 1차 직접 입력)", () => {
+    it("mode 없이 create()하면 기본값은 region이다", () => {
+      const job = store.create(["강남"], 8, 30000);
+      expect(job.mode).toBe("region");
+    });
+
+    it("create()에 manual을 넘기면 job.mode가 manual이다", () => {
+      const job = store.create(["강남역"], 8, 30000, "manual");
+      expect(job.mode).toBe("manual");
+    });
+
+    it("같은 문자열이라도 mode가 다르면 findFresh가 서로 섞이지 않는다", () => {
+      const regionJob = store.create(["강남역"], 8, 30000, "region");
+      store.markDone(regionJob.id, fakeResult());
+      const manualJob = store.create(["강남역"], 8, 30000, "manual");
+      store.markDone(manualJob.id, fakeResult());
+
+      expect(store.findFresh(["강남역"], 8, 30000, new Date(), "region")?.id).toBe(regionJob.id);
+      expect(store.findFresh(["강남역"], 8, 30000, new Date(), "manual")?.id).toBe(manualJob.id);
+    });
+
+    it("같은 문자열이라도 mode가 다르면 findActive가 서로 섞이지 않는다", () => {
+      const regionJob = store.create(["강남역"], 8, 30000, "region");
+      const manualJob = store.create(["강남역"], 8, 30000, "manual");
+
+      expect(store.findActive(["강남역"], 8, 30000, "region")?.id).toBe(regionJob.id);
+      expect(store.findActive(["강남역"], 8, 30000, "manual")?.id).toBe(manualJob.id);
+    });
+
+    it("mode 컬럼이 없는 기존 DB 파일을 열어도 에러 없이 마이그레이션되고 기존 row는 mode가 region으로 조회된다", () => {
+      const dbPath = path.join(tmpdir(), `venue-jobs-migration-${randomUUID()}.db`);
+      try {
+        const legacyDb = new Database(dbPath);
+        legacyDb.pragma("journal_mode = WAL");
+        legacyDb.exec(`
+          CREATE TABLE venue_jobs (
+            id TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            regions TEXT NOT NULL,
+            party_size INTEGER NOT NULL,
+            budget_per_person INTEGER NOT NULL,
+            result TEXT,
+            error TEXT,
+            usage TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        `);
+        const now = new Date().toISOString();
+        legacyDb.prepare(
+          "INSERT INTO venue_jobs (id, status, regions, party_size, budget_per_person, created_at, updated_at) VALUES ('legacy-1', 'done', '[\"강남\"]', 8, 30000, ?, ?)",
+        ).run(now, now);
+        legacyDb.close();
+
+        const migrated = createVenueJobStore(dbPath);
+        expect(migrated.get("legacy-1")?.mode).toBe("region");
+      } finally {
+        for (const suffix of ["", "-shm", "-wal"]) {
+          try {
+            rmSync(`${dbPath}${suffix}`, { force: true });
+          } catch {
+            /* 무시 */
+          }
+        }
+      }
     });
   });
 
