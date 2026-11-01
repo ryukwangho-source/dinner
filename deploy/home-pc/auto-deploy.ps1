@@ -66,7 +66,8 @@ function Run-Deploy {
     }
     Write-Log 'pull done - starting build'
 
-    cmd /c "bun run build >> `"$log`" 2>&1"
+    # bun 대신 npm 을 쓴다 — 이 PC의 실제 환경에는 bun 이 없다(run-dinner.ps1과 같은 이유).
+    cmd /c "npm run build >> `"$log`" 2>&1"
     if ($LASTEXITCODE -ne 0) {
         Write-Log 'build failed - leaving existing process running, not deployed'
         return

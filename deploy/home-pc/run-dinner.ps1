@@ -29,7 +29,7 @@ $maxDelay = 300
 $maxLogBytes = 5MB
 
 function Write-Log($message) {
-    # 메시지는 ASCII 로 유지한다 — bun 출력(UTF-8)과 같은 파일에 섞이므로 인코딩 사고를 피한다.
+    # 메시지는 ASCII 로 유지한다 — npm 출력(UTF-8)과 같은 파일에 섞이므로 인코딩 사고를 피한다.
     $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     Add-Content -Path $log -Value "[$stamp] $message" -Encoding utf8
 }
@@ -51,7 +51,8 @@ while ($true) {
     $startedAt = Get-Date
     # 리다이렉션은 cmd 에 맡긴다 — PowerShell 5.1 에서 native exe 의 stderr 를 직접
     # 리다이렉트하면 각 줄이 NativeCommandError 로 감싸여 로그가 오염된다.
-    cmd /c "bun run start:home >> `"$log`" 2>&1"
+    # bun 대신 npm 을 쓴다 — 이 PC의 실제 환경에는 bun 이 없다(invest/travel 런처와 같은 방식).
+    cmd /c "npm run start:home >> `"$log`" 2>&1"
     $exitCode = $LASTEXITCODE
     $uptime = [int]((Get-Date) - $startedAt).TotalSeconds
 
